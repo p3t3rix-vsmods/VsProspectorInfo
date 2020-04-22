@@ -29,7 +29,6 @@
 
   <ItemGroup>
     <Folder Include="assets\" />
-    <Folder Include="src\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,6 +39,10 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <OutFiles Include="$(OutDir)/**" Exclude="$(ExcludeFiles)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Foundation\Foundation.csproj" />
   </ItemGroup>
 
   <Target Name="CopyToBin" AfterTargets="AfterBuild">

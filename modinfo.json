@@ -2,8 +2,9 @@
   "type": "code",
   "modid": "prospectorinfo",
   "name": "ProspectorInfo",
-  "author": "Unknown",
-  "description": ">>ADD YOUR DESCRIPTION HERE<<",
+  "author": "P3t3rix",
+  "description": "Adds info to the tooltip for chunks that are already prospected",
+  "side" :  "client", 
   "version": "1.0.0",
   "dependency": {
     "game": "1.12.14"
