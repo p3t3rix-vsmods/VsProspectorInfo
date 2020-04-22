@@ -4,9 +4,9 @@
   </PropertyGroup>
   <PropertyGroup Label="UserMacros">
     <BinaryDir Condition="'$(Configuration)'=='Debug'">$(SolutionDir)/bin/$(AssemblyName)/</BinaryDir>
-    <ExcludeFiles Condition="'$(Configuration)'=='Debug'">**/VintagestoryAPI.*;**/VSCreativeMod.*;**/VSEssentials.*;**/VSSurvivalMod.*</ExcludeFiles>
+    <ExcludeFiles Condition="'$(Configuration)'=='Debug'">**/VintagestoryAPI.*;**/VSCreativeMod.*;**/VSEssentials.*;**/VSSurvivalMod.*;**/Foundation.*</ExcludeFiles>
     <BinaryDir Condition="'$(Configuration)'=='Release'">$(SolutionDir)/release/$(AssemblyName)/</BinaryDir>
-    <ExcludeFiles Condition="'$(Configuration)'=='Release'">**/VintagestoryAPI.*;**/VSCreativeMod.*;**/VSEssentials.*;**/VSSurvivalMod.*;**/*.pdb</ExcludeFiles>
+    <ExcludeFiles Condition="'$(Configuration)'=='Release'">**/VintagestoryAPI.*;**/VSCreativeMod.*;**/VSEssentials.*;**/VSSurvivalMod.*;**/*.pdb;**/Foundation.*</ExcludeFiles>
   </PropertyGroup>
   
   <ItemGroup>
@@ -50,7 +50,7 @@
   </Target>
   
   <Target Name="CleanBin" AfterTargets="Clean">
-    <RemoveDir Directories="$(BinaryDir)" />
+    <RemoveDir Directories="$(BinaryDir)-$(Version)" />
   </Target>
 
 </Project>
