@@ -3,9 +3,9 @@
     <TargetFramework>net452</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Label="UserMacros">
-    <BinaryDir Condition="'$(Configuration)'=='Debug'">$(SolutionDir)/bin/$(AssemblyName)/</BinaryDir>
+    <BinaryDir Condition="'$(Configuration)'=='Debug'">$(SolutionDir)/bin/$(AssemblyName)</BinaryDir>
     <ExcludeFiles Condition="'$(Configuration)'=='Debug'">**/VintagestoryAPI.*;**/VSCreativeMod.*;**/VSEssentials.*;**/VSSurvivalMod.*;**/Foundation.*</ExcludeFiles>
-    <BinaryDir Condition="'$(Configuration)'=='Release'">$(SolutionDir)/release/$(AssemblyName)/</BinaryDir>
+    <BinaryDir Condition="'$(Configuration)'=='Release'">$(SolutionDir)/release/$(AssemblyName)</BinaryDir>
     <ExcludeFiles Condition="'$(Configuration)'=='Release'">**/VintagestoryAPI.*;**/VSCreativeMod.*;**/VSEssentials.*;**/VSSurvivalMod.*;**/*.pdb;**/Foundation.*</ExcludeFiles>
   </PropertyGroup>
   
@@ -46,7 +46,7 @@
   </ItemGroup>
 
   <Target Name="CopyToBin" AfterTargets="AfterBuild">
-    <Copy SourceFiles="@(OutFiles)" DestinationFiles="@(OutFiles->'$(BinaryDir)/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(OutFiles)" DestinationFiles="@(OutFiles->'$(BinaryDir)-$(Version)/%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
   
   <Target Name="CleanBin" AfterTargets="Clean">
