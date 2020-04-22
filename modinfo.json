@@ -4,10 +4,10 @@
   "name": "ProspectorInfo",
   "author": "P3t3rix",
   "description": "Adds info to the tooltip for chunks that are already prospected",
-  "side" :  "client", 
+  "side": "client",
   "version": "1.0.0",
-  "dependency": {
+  "dependencies": {
     "game": "",
-    "foundation" :  "1.1" 
+    "foundation": "1.1"
   }
 }
