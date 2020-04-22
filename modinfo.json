@@ -7,6 +7,6 @@
   "side" :  "client", 
   "version": "1.0.0",
   "dependency": {
-    "game": "1.12.14"
+    "game": ""
   }
 }
