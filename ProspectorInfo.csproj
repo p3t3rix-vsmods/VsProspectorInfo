@@ -41,10 +41,6 @@
     <OutFiles Include="$(OutDir)/**" Exclude="$(ExcludeFiles)" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Foundation\Foundation.csproj" />
-  </ItemGroup>
-
   <Target Name="CopyToBin" AfterTargets="AfterBuild">
     <Copy SourceFiles="@(OutFiles)" DestinationFiles="@(OutFiles->'$(BinaryDir)-$(Version)/%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>

@@ -1,0 +1,3 @@
+[submodule "src/Foundation"]
+	path = src/Foundation
+	url = https://github.com/p3t3rix/VsFoundation.git
