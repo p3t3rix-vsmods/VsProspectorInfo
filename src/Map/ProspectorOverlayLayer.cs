@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using Foundation.Extensions;
 using Vintagestory.API.Client;
@@ -40,30 +41,44 @@ namespace ProspectorInfo.Map
         private void OnChatMessage(int groupId, string message, EnumChatType chattype, string data)
         {
             var pos = _clientApi.World.Player.CurrentBlockSelection?.Position ?? _clientApi.World.Player.Entity.Pos.AsBlockPos;
-            if (pos != null && groupId == GlobalConstants.InfoLogChatGroup && message.StartsWith(_triggerword))
-            {
-                message = _cleanupRegex.Replace(message, string.Empty);
-                var posX = pos.X / _chunksize;
-                var posZ = pos.Z / _chunksize;
-                _messages.RemoveAll(m => m.X == posX && m.Z == posZ);
-                _messages.Add(new ProspectInfo(posX, posZ, message));
-                _clientApi.SaveDataFile(Filename, _messages);
-            }
+            if (pos == null || groupId != GlobalConstants.InfoLogChatGroup || !message.StartsWith(_triggerword)) return;
+            
+            message = _cleanupRegex.Replace(message, string.Empty);
+            var posX = pos.X / _chunksize;
+            var posZ = pos.Z / _chunksize;
+            _messages.RemoveAll(m => m.X == posX && m.Z == posZ);
+            _messages.Add(new ProspectInfo(posX, posZ, message));
+            _clientApi.SaveDataFile(Filename, _messages);
         }
 
         public override void OnMapOpenedClient()
         {
+            if (!_worldMapManager.IsOpened) return;
+
+            RebuildMap();
+        }
+
+        private void RebuildMap()
+        {
             foreach (var component in _components)
             {
-                _worldMapManager.RemoveMapData(component);
                 component.Dispose();
             }
+
+            _components.Clear();
 
             foreach (var message in _messages)
             {
                 var component = new ProspectorOverlayMapComponent(_clientApi, message.X, message.Z, message.Message);
                 _components.Add(component);
-                _worldMapManager.AddMapData(component);
+            }
+        }
+
+        public override void OnMouseMoveClient(MouseEvent args, GuiElementMap mapElem, StringBuilder hoverText)
+        {
+            foreach (var component in _components)
+            {
+                component.OnMouseMove(args, mapElem, hoverText);
             }
         }
 
