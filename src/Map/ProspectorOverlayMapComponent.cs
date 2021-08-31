@@ -5,35 +5,55 @@ using Vintagestory.GameContent;
 
 namespace ProspectorInfo.Map
 {
-    internal class ProspectorOverlayMapComponent : MapComponent
+    public class ProspectorOverlayMapComponent : MapComponent
     {
-        private readonly int _chunkX;
-        private readonly int _chunkZ;
+        public readonly int ChunkX;
+        public readonly int ChunkZ;
+
         private readonly string _message;
         private readonly int _chunksize;
 
-        public ProspectorOverlayMapComponent(ICoreClientAPI clientApi, int chunkX, int chunkZ, string message) : base(clientApi)
+        private LoadedTexture colorTexture;
+        private Vec3d worldPos = new Vec3d();
+        private Vec2f viewPos = new Vec2f();
+
+        public ProspectorOverlayMapComponent(ICoreClientAPI clientApi, int chunkX, int chunkZ, string message, LoadedTexture colorTexture) : base(clientApi)
         {
-            _chunkX = chunkX;
-            _chunkZ = chunkZ;
-            _message = message;
-            _chunksize = clientApi.World.BlockAccessor.ChunkSize;
+            this.ChunkX = chunkX;
+            this.ChunkZ = chunkZ;
+            this._message = message;
+            this._chunksize = clientApi.World.BlockAccessor.ChunkSize;
+            this.worldPos = new Vec3d(chunkX * _chunksize, 0, chunkZ * _chunksize);
+            this.colorTexture = colorTexture;
         }
 
         public override void OnMouseMove(MouseEvent args, GuiElementMap mapElem, StringBuilder hoverText)
         {
             var worldPos = new Vec3d();
-            float mouseX = (float) (args.X - mapElem.Bounds.renderX);
-            float mouseY = (float) (args.Y - mapElem.Bounds.renderY);
+            float mouseX = (float)(args.X - mapElem.Bounds.renderX);
+            float mouseY = (float)(args.Y - mapElem.Bounds.renderY);
 
-            mapElem.TranslateViewPosToWorldPos(new Vec2f(mouseX, mouseY),  ref worldPos );
+            mapElem.TranslateViewPosToWorldPos(new Vec2f(mouseX, mouseY), ref worldPos);
 
-            var chunkX = (int) (worldPos.X / _chunksize);
-            var chunkZ = (int) (worldPos.Z / _chunksize);
-            if (chunkX == _chunkX && chunkZ == _chunkZ)
+            var chunkX = (int)(worldPos.X / _chunksize);
+            var chunkZ = (int)(worldPos.Z / _chunksize);
+            if (chunkX == ChunkX && chunkZ == ChunkZ)
             {
                 hoverText.AppendLine($"\n{_message}");
             }
+        }
+
+        public override void Render(GuiElementMap map, float dt)
+        {
+            map.TranslateWorldPosToViewPos(this.worldPos, ref this.viewPos);
+
+            base.capi.Render.Render2DTexture(
+                this.colorTexture.TextureId,
+                (int)(map.Bounds.renderX + viewPos.X),
+                (int)(map.Bounds.renderY + viewPos.Y),
+                (int)(this.colorTexture.Width * map.ZoomLevel),
+                (int)(this.colorTexture.Height * map.ZoomLevel),
+                50);
         }
     }
 }

@@ -1,14 +1,9 @@
-﻿using System;
-using System.ComponentModel;
-using System.Globalization;
-using System.Linq;
-
-namespace ProspectorInfo.Map
+﻿namespace ProspectorInfo.Map
 {
     internal class ProspectInfo
     {
-        public int X;
-        public int Z;
+        public readonly int X;
+        public readonly int Z;
         public string Message;
 
         public ProspectInfo(int x, int z, string message)
