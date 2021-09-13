@@ -36,5 +36,6 @@ namespace ProspectorInfo
             var prospectorInfoPatches = new Harmony("vsprospectorinfo.patches");
             prospectorInfoPatches.PatchAll(Assembly.GetExecutingAssembly());
         }
+
     }
 }

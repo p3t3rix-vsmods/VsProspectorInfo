@@ -51,6 +51,22 @@ namespace ProspectorInfo.Map
                 _clientApi = (ICoreClientAPI)api;
                 _clientApi.Event.ChatMessage += OnChatMessage;
                 _clientApi.Event.AfterActiveSlotChanged += Event_AfterActiveSlotChanged;
+                _clientApi.Event.PlayerJoin += (p) =>
+                {
+                    if (p == _clientApi?.World.Player)
+                    {
+                        var invMan = p?.InventoryManager?.GetHotbarInventory();
+                        invMan.SlotModified += Event_SlotModified;
+                    }
+                };
+                _clientApi.Event.PlayerLeave += (p) =>
+                {
+                    if (p == _clientApi?.World.Player)
+                    {
+                        var invMan = p?.InventoryManager?.GetHotbarInventory();
+                        invMan.SlotModified -= Event_SlotModified;
+                    }
+                };
 
                 _clientApi.RegisterCommand("pi", "ProspectorInfo main command. Allows you to toggle the visibility of the chunk texture overlay.", "", OnPiCommand);
 
@@ -59,7 +75,9 @@ namespace ProspectorInfo.Map
             }
         }
 
+
         #region Commands/Events
+
 
         private void OnPiCommand(int groupId, CmdArgs args)
         {
@@ -130,14 +148,25 @@ namespace ProspectorInfo.Map
             }
         }
 
+        private void Event_SlotModified(int slotId)
+        {
+            UpdateRenderOverride();
+        }
         private void Event_AfterActiveSlotChanged(ActiveSlotChangeEventArgs t1)
+        {
+            UpdateRenderOverride();
+        }
+
+        private void UpdateRenderOverride()
         {
             if (!_config.AutoToggle)
                 return;
 
-            _temporaryRenderOverride = _clientApi?.World?.Player?.InventoryManager?.GetHotbarItemstack(t1.ToSlot)?.Item?.Code?
-                .FirstPathPart()?.ToLower().StartsWith("prospectingpick") ?? false;
+            _temporaryRenderOverride = ProspectingPickInHand;
         }
+
+        private bool ProspectingPickInHand => _clientApi?.World?.Player?.InventoryManager?.ActiveHotbarSlot?.Itemstack?.Item?.Code?
+                .FirstPathPart()?.ToLower().StartsWith("prospectingpick") ?? false;
 
         #endregion
 
