@@ -27,7 +27,7 @@ namespace ProspectorInfo.Map
         private readonly IWorldMapManager _worldMapManager;
         private readonly Regex _cleanupRegex;
         private readonly ModConfig _config;
-        private LoadedTexture _colorTexture;
+        private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
         private bool _temporaryRenderOverride = false;
 
         public override string Title => "ProspectorOverlay";
@@ -69,9 +69,11 @@ namespace ProspectorInfo.Map
                 };
 
                 _clientApi.RegisterCommand("pi", "ProspectorInfo main command. Allows you to toggle the visibility of the chunk texture overlay.", "", OnPiCommand);
-
-                _colorTexture?.Dispose();
-                _colorTexture = GenerateOverlayTexture();
+                for (int i = 0; i < _colorTextures.Length; i++)
+                {
+                    _colorTextures[i]?.Dispose();
+                    _colorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
+                }
             }
         }
 
@@ -128,6 +130,42 @@ namespace ProspectorInfo.Map
                         _clientApi.ShowChatMessage(e.Message);
                     }
                     break;
+                case "setlowheatcolor":
+                    try
+                    {
+                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
+                        _config.LowHeatColor = newColor;
+                        _config.Save(api);
+
+                        RebuildMap(true);
+                    }
+                    catch (FormatException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    catch (ArgumentException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    break;
+                case "sethighheatcolor":
+                    try
+                    {
+                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
+                        _config.HighHeatColor = newColor;
+                        _config.Save(api);
+
+                        RebuildMap(true);
+                    }
+                    catch (FormatException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    catch (ArgumentException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    break;
                 case "setborderthickness":
                     var newThickness = args.PopInt(2).Value;
                     _config.BorderThickness = newThickness;
@@ -138,6 +176,22 @@ namespace ProspectorInfo.Map
                 case "toggleborder":
                     var toggleBorder = args.PopBool() ?? !_config.RenderBorder;
                     _config.RenderBorder = toggleBorder;
+                    _config.Save(api);
+
+                    RebuildMap(true);
+                    break;
+                case "mode":
+                    var newMode = args.PopInt(2).Value;
+                    _config.MapMode = newMode;
+                    _config.Save(api);
+
+                    RebuildMap(true);
+                    break;
+                case "heatmapore":
+                    var oreName = args.PopAll();
+                    if (oreName.Trim() == "" || oreName.Trim() == "null")
+                        oreName = null;
+                    _config.HeatMapOre = oreName;
                     _config.Save(api);
 
                     RebuildMap(true);
@@ -233,10 +287,17 @@ namespace ProspectorInfo.Map
         #endregion
 
         #region Texture
-        private LoadedTexture GenerateOverlayTexture()
+        private LoadedTexture GenerateOverlayTexture(RelativeDensity? relativeDensity)
         {
             var colorTexture = new LoadedTexture(_clientApi, 0, _chunksize, _chunksize);
-            var colorArray = Enumerable.Repeat(_config.TextureColor.RGBA, _chunksize * _chunksize).ToArray();
+            int[] colorArray;
+            if (_config.MapMode == 1)
+            {
+                colorArray = Enumerable.Repeat(ColorUtil.ColorOverlay(_config.LowHeatColor.RGBA, _config.HighHeatColor.RGBA, 1 * (int)relativeDensity / 8.0f), _chunksize * _chunksize).ToArray();
+            } else
+            {
+                colorArray = Enumerable.Repeat(_config.TextureColor.RGBA, _chunksize * _chunksize).ToArray();
+            }
 
             if (_config.RenderBorder)
             {
@@ -285,7 +346,12 @@ namespace ProspectorInfo.Map
                 var castComponent = component as ProspectorOverlayMapComponent;
                 return castComponent?.ChunkX == posX && castComponent.ChunkZ == posZ;
             });
-            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, message, _colorTexture);
+            RelativeDensity densityValue;
+            if (_config.HeatMapOre == null)
+                densityValue = _messages.Last().Values.First().relativeDensity;
+            else
+                densityValue = _messages.Last().GetValueOfOre(_config.HeatMapOre);
+            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, message, _colorTextures[(int)densityValue]);
             _components.Add(newComponent);
 
             blocksSinceLastSuccessList.Clear();
@@ -310,13 +376,21 @@ namespace ProspectorInfo.Map
 
             if (rebuildTexture)
             {
-                _colorTexture?.Dispose();
-                _colorTexture = GenerateOverlayTexture();
+                for (int i = 0; i < _colorTextures.Length; i++)
+                {
+                    _colorTextures[i]?.Dispose();
+                    _colorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
+                }
             }
 
             foreach (var message in _messages)
             {
-                var component = new ProspectorOverlayMapComponent(_clientApi, message.X, message.Z, message.Message, _colorTexture);
+                RelativeDensity densityValue;
+                if (_config.HeatMapOre == null)
+                    densityValue = message.Values.First().relativeDensity;
+                else
+                    densityValue = message.GetValueOfOre(_config.HeatMapOre);
+                var component = new ProspectorOverlayMapComponent(_clientApi, message.X, message.Z, message.Message, _colorTextures[(int)densityValue]);
                 _components.Add(component);
             }
         }
