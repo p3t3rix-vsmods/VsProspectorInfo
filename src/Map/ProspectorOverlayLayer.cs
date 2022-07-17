@@ -142,8 +142,41 @@ namespace ProspectorInfo.Map
 
                     RebuildMap(true);
                     break;
+                case "help":
+                    switch (args.PopWord(""))
+                    {
+                        case "showoverlay":
+                            _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
+                            break;
+                        case "setcolor":
+                            _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the overlay tiles.");
+                            _clientApi.ShowChatMessage("Command version of config \"TextureColor\". Default config: 7 52 91 50");
+                            break;
+                        case "setbordercolor":
+                            _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the tile outlines.");
+                            _clientApi.ShowChatMessage("Command version of config \"BorderColor\". Default config: 0 0 0 200");
+                            break;
+                        case "setborderthickness":
+                            _clientApi.ShowChatMessage(".pi setborderthickness [int] - Sets the tile outline's thickness.");
+                            _clientApi.ShowChatMessage("Command version of config \"BorderThickness\". Default config: 1");
+                            break;
+                        case "toggleborder":
+                            _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
+                            _clientApi.ShowChatMessage("Command version of config \"RenderBorder\". Default config: true");
+                            break;
+                        default:
+                            _clientApi.ShowChatMessage(".pi - Defaults to \"showoverlay\" without arguments.");
+                            _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
+                            _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the overlay tiles.");
+                            _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the tile outlines.");
+                            _clientApi.ShowChatMessage(".pi setborderthickness [int] - Sets the tile outline's thickness.");
+                            _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
+                            _clientApi.ShowChatMessage(".pi help [command] - Shows command's help. Defaults to listing .pi subcommands.");
+                            break;
+                    }
+                    break;
                 default:
-                    _clientApi.ShowChatMessage("Unknown subcommand!");
+                    _clientApi.ShowChatMessage("Unknown subcommand! Try \"help\".");
                     break;
             }
         }
