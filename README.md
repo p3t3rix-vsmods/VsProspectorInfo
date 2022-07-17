@@ -30,3 +30,10 @@ The mod renders a transparent square of all chunks that have been prospected. If
 After prospecting, the info will be displayed in the tooltip of the minimap when hovering over the chunk. This info is stored in %Vintage_Story_Data%/ModData/YourWorldId/vsprospectorinfo.data and is client side only.
 
 ![image](https://user-images.githubusercontent.com/5238284/79952656-09e3f680-847b-11ea-96c9-b4cb9b47355f.png)
+
+
+##Compiling
+
+To compile the mod you need to set 2 environment variables:
+VINTAGE_STORY => the path to the game directory e.g. c:\games\vintagestory
+VINTAGE_STORY_DATA => the path to the games data directory typically located somewhere in appdata e.g. C:\Users\MyUser\AppData\Roaming\VintagestoryData
