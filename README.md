@@ -32,13 +32,13 @@ After prospecting, the info will be displayed in the tooltip of the minimap when
 ![image](https://user-images.githubusercontent.com/5238284/79952656-09e3f680-847b-11ea-96c9-b4cb9b47355f.png)
 
 
-##Compiling
+## Compiling
 
 To compile the mod you need to set 2 environment variables:
 
 - VINTAGE_STORY => the path to the game directory e.g. c:\games\vintagestory
 - VINTAGE_STORY_DATA => the path to the games data directory typically located somewhere in appdata e.g. C:\Users\MyUser\AppData\Roaming\VintagestoryData
 
-##Create a release
+## Create a release
 To create a release just compile the solution in Release configuration. A folder named "release" should appear in the solution directory.
 This can then be zipped to be uploaded to the mod-db.
