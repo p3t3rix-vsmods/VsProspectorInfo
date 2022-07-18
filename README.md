@@ -33,9 +33,8 @@ After prospecting, the info will be displayed in the tooltip of the minimap when
 
 
 ## Compiling
-
-To compile the mod you need to set 2 environment variables:
-
+Clone the repository with submodules included: "git clone --recursive"
+To compile the mod you also need to set 2 environment variables:
 - VINTAGE_STORY => the path to the game directory e.g. c:\games\vintagestory
 - VINTAGE_STORY_DATA => the path to the games data directory typically located somewhere in appdata e.g. C:\Users\MyUser\AppData\Roaming\VintagestoryData
 
