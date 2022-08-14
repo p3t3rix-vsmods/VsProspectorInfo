@@ -162,42 +162,6 @@ namespace ProspectorInfo.Map
                         _clientApi.ShowChatMessage(e.Message);
                     }
                     break;
-                case "setlowheatcolor":
-                    try
-                    {
-                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
-                        _config.LowHeatColor = newColor;
-                        _config.Save(api);
-
-                        RebuildMap(true);
-                    }
-                    catch (FormatException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    catch (ArgumentException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    break;
-                case "sethighheatcolor":
-                    try
-                    {
-                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
-                        _config.HighHeatColor = newColor;
-                        _config.Save(api);
-
-                        RebuildMap(true);
-                    }
-                    catch (FormatException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    catch (ArgumentException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    break;
                 case "setborderthickness":
                     var newThickness = args.PopInt(2).Value;
                     _config.BorderThickness = newThickness;
