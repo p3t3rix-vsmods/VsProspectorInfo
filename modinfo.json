@@ -5,7 +5,7 @@
   "author": "P3t3rix",
   "description": "Adds info to the tooltip for chunks that are already prospected",
   "side": "client",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "dependencies": {
     "game": "1.16.0"
   }

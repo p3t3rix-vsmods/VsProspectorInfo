@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Foundation.Extensions;
-using Foundation.Utils;
 using HarmonyLib;
 using ProspectorInfo.Models;
 using Vintagestory.API.Client;
@@ -12,36 +11,34 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
+using Vintagestory.API.Util;
 using Vintagestory.GameContent;
 
 namespace ProspectorInfo.Map
 {
     internal class ProspectorOverlayLayer : MapLayer
     {
+        // They have to be static so the PrintProbeResultsPatch postfix can access them
+        static private ICoreClientAPI _clientApi;
+        static private ProspectorMessages _prospectInfos;
+        static private readonly List<MapComponent> _components = new List<MapComponent>();
+        static private ModConfig _config;
+        static private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
+
         private const string Filename = ProspectorInfoModSystem.DATAFILE;
-        private readonly string[] _triggerwords;
-        private readonly ProspectorMessages _messages;
         private readonly int _chunksize;
-        private readonly ICoreClientAPI _clientApi;
-        private readonly List<MapComponent> _components = new List<MapComponent>();
         private readonly IWorldMapManager _worldMapManager;
-        private readonly Regex _cleanupRegex;
-        private readonly ModConfig _config;
-        private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
         private bool _temporaryRenderOverride = false;
 
         public override string Title => "ProspectorOverlay";
         public override EnumMapAppSide DataSide => EnumMapAppSide.Client;
 
-        protected internal static List<BlockSelection> blocksSinceLastSuccessList = new List<BlockSelection>();
-
         public ProspectorOverlayLayer(ICoreAPI api, IWorldMapManager mapSink) : base(api, mapSink)
         {
             _worldMapManager = mapSink;
             _chunksize = api.World.BlockAccessor.ChunkSize;
-            _messages = api.LoadOrCreateDataFile<ProspectorMessages>(Filename);
-            _triggerwords = LangUtils.GetAllLanguageStringsOfKey("propick-reading-title").Select(x => x.Split().FirstOrDefault()).Where(x => !string.IsNullOrEmpty(x)).ToArray();
-            _cleanupRegex = new Regex("<.*?>", RegexOptions.Compiled);
+            _prospectInfos = api.LoadOrCreateDataFile<ProspectorMessages>(Filename);
 
             var modSystem = this.api.ModLoader.GetModSystem<ProspectorInfoModSystem>();
             _config = modSystem.Config;
@@ -49,7 +46,6 @@ namespace ProspectorInfo.Map
             if (api.Side == EnumAppSide.Client)
             {
                 _clientApi = (ICoreClientAPI)api;
-                _clientApi.Event.ChatMessage += OnChatMessage;
                 _clientApi.Event.AfterActiveSlotChanged += Event_AfterActiveSlotChanged;
                 _clientApi.Event.PlayerJoin += (p) =>
                 {
@@ -99,6 +95,42 @@ namespace ProspectorInfo.Map
                     {
                         var newColor = TrySetRGBAValues(args, _config.TextureColor);
                         _config.TextureColor = newColor;
+                        _config.Save(api);
+
+                        RebuildMap(true);
+                    }
+                    catch (FormatException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    catch (ArgumentException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    break;
+                case "setlowheatcolor":
+                    try
+                    {
+                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
+                        _config.LowHeatColor = newColor;
+                        _config.Save(api);
+
+                        RebuildMap(true);
+                    }
+                    catch (FormatException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    catch (ArgumentException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    break;
+                case "sethighheatcolor":
+                    try
+                    {
+                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
+                        _config.HighHeatColor = newColor;
                         _config.Save(api);
 
                         RebuildMap(true);
@@ -196,8 +228,41 @@ namespace ProspectorInfo.Map
 
                     RebuildMap(true);
                     break;
+                case "help":
+                    switch (args.PopWord(""))
+                    {
+                        case "showoverlay":
+                            _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
+                            break;
+                        case "setcolor":
+                            _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the overlay tiles.");
+                            _clientApi.ShowChatMessage("Command version of config \"TextureColor\". Default config: 7 52 91 50");
+                            break;
+                        case "setbordercolor":
+                            _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the tile outlines.");
+                            _clientApi.ShowChatMessage("Command version of config \"BorderColor\". Default config: 0 0 0 200");
+                            break;
+                        case "setborderthickness":
+                            _clientApi.ShowChatMessage(".pi setborderthickness [int] - Sets the tile outline's thickness.");
+                            _clientApi.ShowChatMessage("Command version of config \"BorderThickness\". Default config: 1");
+                            break;
+                        case "toggleborder":
+                            _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
+                            _clientApi.ShowChatMessage("Command version of config \"RenderBorder\". Default config: true");
+                            break;
+                        default:
+                            _clientApi.ShowChatMessage(".pi - Defaults to \"showoverlay\" without arguments.");
+                            _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
+                            _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the overlay tiles.");
+                            _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the tile outlines.");
+                            _clientApi.ShowChatMessage(".pi setborderthickness [int] - Sets the tile outline's thickness.");
+                            _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
+                            _clientApi.ShowChatMessage(".pi help [command] - Shows command's help. Defaults to listing .pi subcommands.");
+                            break;
+                    }
+                    break;
                 default:
-                    _clientApi.ShowChatMessage("Unknown subcommand!");
+                    _clientApi.ShowChatMessage("Unknown subcommand! Try \"help\".");
                     break;
             }
         }
@@ -294,7 +359,8 @@ namespace ProspectorInfo.Map
             if (_config.MapMode == 1)
             {
                 colorArray = Enumerable.Repeat(ColorUtil.ColorOverlay(_config.LowHeatColor.RGBA, _config.HighHeatColor.RGBA, 1 * (int)relativeDensity / 8.0f), _chunksize * _chunksize).ToArray();
-            } else
+            }
+            else
             {
                 colorArray = Enumerable.Repeat(_config.TextureColor.RGBA, _chunksize * _chunksize).ToArray();
             }
@@ -325,38 +391,6 @@ namespace ProspectorInfo.Map
         }
         #endregion
 
-        private void OnChatMessage(int groupId, string message, EnumChatType chattype, string data)
-        {
-            if (_clientApi?.World?.Player == null)
-                return;
-
-            var pos = _clientApi.World.Player.WorldData.CurrentGameMode == EnumGameMode.Creative ? blocksSinceLastSuccessList.LastOrDefault()?.Position : blocksSinceLastSuccessList.ElementAtOrDefault(blocksSinceLastSuccessList.Count - 2 - 1)?.Position;
-            if (pos == null || groupId != GlobalConstants.InfoLogChatGroup || !_triggerwords.Any(triggerWord => message.StartsWith(triggerWord)))
-                return;
-
-            message = _cleanupRegex.Replace(message, string.Empty);
-            var posX = pos.X / _chunksize;
-            var posZ = pos.Z / _chunksize;
-            _messages.RemoveAll(m => m.X == posX && m.Z == posZ);
-            _messages.Add(new ProspectInfo(posX, posZ, message));
-            _clientApi.SaveDataFile(Filename, _messages);
-
-            _components.RemoveAll(component =>
-            {
-                var castComponent = component as ProspectorOverlayMapComponent;
-                return castComponent?.ChunkX == posX && castComponent.ChunkZ == posZ;
-            });
-            RelativeDensity densityValue;
-            if (_config.HeatMapOre == null)
-                densityValue = _messages.Last().Values.First().relativeDensity;
-            else
-                densityValue = _messages.Last().GetValueOfOre(_config.HeatMapOre);
-            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, message, _colorTextures[(int)densityValue]);
-            _components.Add(newComponent);
-
-            blocksSinceLastSuccessList.Clear();
-        }
-
         public override void OnMapOpenedClient()
         {
             if (!_worldMapManager.IsOpened)
@@ -383,14 +417,17 @@ namespace ProspectorInfo.Map
                 }
             }
 
-            foreach (var message in _messages)
+            foreach (var message in _prospectInfos)
             {
                 RelativeDensity densityValue;
                 if (_config.HeatMapOre == null)
-                    densityValue = message.Values.First().relativeDensity;
+                    if (message.Values != null && message.Values.Count > 0)
+                        densityValue = message.Values.First().relativeDensity;
+                    else
+                        densityValue = RelativeDensity.Zero;
                 else
                     densityValue = message.GetValueOfOre(_config.HeatMapOre);
-                var component = new ProspectorOverlayMapComponent(_clientApi, message.X, message.Z, message.Message, _colorTextures[(int)densityValue]);
+                var component = new ProspectorOverlayMapComponent(_clientApi, message.X, message.Z, message.GetMessage(), _colorTextures[(int)densityValue]);
                 _components.Add(component);
             }
         }
@@ -420,16 +457,57 @@ namespace ProspectorInfo.Map
             base.Dispose();
         }
 
-        // ReSharper disable once UnusedType.Local
         [HarmonyPatch(typeof(ItemProspectingPick), "ProbeBlockDensityMode")]
         class PrintProbeResultsPatch
         {
             static void Postfix(IWorldAccessor world, Entity byEntity, ItemSlot itemslot, BlockSelection blockSel)
             {
-                if (world.Side != EnumAppSide.Client)
+                // Only needed to be compatible with https://github.com/Spoonail-Iroiro/VSOneshotPropickMod Version 1.0.0
+                // TODO Should be removed once VSOneshotPropickMod get updated and the "compatibility code" gets removed
+                // Dont forget to rename RealPrintProbeResultsPatch back to PrintProbeResultsPatch
+            }
+        }
+
+        [HarmonyPatch(typeof(ItemProspectingPick), "PrintProbeResults")]
+        class RealPrintProbeResultsPatch
+        {
+            static void Postfix(IWorldAccessor world, IServerPlayer byPlayer, ItemSlot itemslot, BlockPos pos)
+            {
+                if (world.Side == EnumAppSide.Client || _clientApi?.World?.Player == null)
                     return;
 
-                blocksSinceLastSuccessList.Add(blockSel);
+                ProPickWorkSpace _proPickWorkSpace = ObjectCacheUtil.GetOrCreate(world.Api, "propickworkspace", () =>
+                {
+                    ProPickWorkSpace ppws = new ProPickWorkSpace();
+                    ppws.OnLoaded(world.Api);
+                    return ppws;
+                });
+
+                int _chunkSize = world.BlockAccessor.ChunkSize;
+                int posX = pos.X / _chunkSize;
+                int posZ = pos.Z / _chunkSize;
+
+                _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
+                _prospectInfos.Add(new ProspectInfo(pos, _chunkSize, world.Api as ICoreServerAPI, _proPickWorkSpace));
+                _clientApi.SaveDataFile(Filename, _prospectInfos);
+
+                _components.RemoveAll(component =>
+                {
+                    var castComponent = component as ProspectorOverlayMapComponent;
+                    return castComponent?.ChunkX == posX && castComponent.ChunkZ == posZ;
+                });
+
+                RelativeDensity densityValue;
+                if (_config.HeatMapOre == null)
+                    if (_prospectInfos.Last().Values != null && _prospectInfos.Last().Values.Count > 0)
+                        densityValue = _prospectInfos.Last().Values.First().relativeDensity;
+                    else
+                        densityValue = RelativeDensity.Zero;
+                else
+                    densityValue = _prospectInfos.Last().GetValueOfOre(_config.HeatMapOre);
+
+                var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, _prospectInfos.Last().GetMessage(), _colorTextures[(int)densityValue]);
+                _components.Add(newComponent);
             }
         }
     }

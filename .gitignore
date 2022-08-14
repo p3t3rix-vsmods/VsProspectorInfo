@@ -8,5 +8,6 @@
 **/obj
 **/.vs
 *.user
-
+.idea
+/release
 # End of https://www.gitignore.io/api/dotnetcore
