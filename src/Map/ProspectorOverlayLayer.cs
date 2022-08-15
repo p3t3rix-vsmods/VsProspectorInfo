@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using Foundation.Extensions;
 using HarmonyLib;
 using ProspectorInfo.Models;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
-using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
@@ -28,7 +26,7 @@ namespace ProspectorInfo.Map
 
         private const string Filename = ProspectorInfoModSystem.DATAFILE;
         private readonly int _chunksize;
-        private readonly IWorldMapManager _worldMapManager;
+        static private IWorldMapManager _worldMapManager;
         private bool _temporaryRenderOverride = false;
 
         public override string Title => "ProspectorOverlay";
@@ -89,6 +87,18 @@ namespace ProspectorInfo.Map
                         _config.RenderTexturesOnMap = !_config.RenderTexturesOnMap;
 
                     _config.Save(api);
+                    break;
+                case "showgui":
+                    // Auto-sized dialog at the center of the screen
+                    ElementBounds dialogBounds = ElementStdBounds.AutosizedMainDialog.WithAlignment(EnumDialogArea.CenterMiddle);
+
+                    // Just a simple 300x300 pixel box
+                    ElementBounds textBounds = ElementBounds.Fixed(0, 0, 300, 300);
+
+                    GuiComposer SingleComposer = _clientApi.Gui.CreateCompo("ProspectInfo Settings", dialogBounds)
+                        .AddStaticText("This is a piece of text at the center of your screen - Enjoy!", CairoFont.WhiteDetailText(), textBounds)
+                        .Compose()
+                    ;
                     break;
                 case "setcolor":
                     try
@@ -427,7 +437,7 @@ namespace ProspectorInfo.Map
             static void Postfix(IWorldAccessor world, Entity byEntity, ItemSlot itemslot, BlockSelection blockSel)
             {
                 // Only needed to be compatible with https://github.com/Spoonail-Iroiro/VSOneshotPropickMod Version 1.0.0
-                // TODO Should be removed once VSOneshotPropickMod get updated and the "compatibility code" gets removed
+                // TODO Should be removed once VSOneshotPropickMod gets updated and the "compatibility code" gets removed
                 // Dont forget to rename RealPrintProbeResultsPatch back to PrintProbeResultsPatch
             }
         }
