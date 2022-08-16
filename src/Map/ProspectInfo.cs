@@ -16,7 +16,6 @@ namespace ProspectorInfo.Map
         public readonly int X;
         public readonly int Z;
         public readonly List<OreOccurence> Values;
-        [Newtonsoft.Json.JsonIgnore]
         private readonly string Message; //Used for backwards compatibility
 
         private readonly Regex _cleanupRegex = new Regex("<.*?>", RegexOptions.Compiled);
