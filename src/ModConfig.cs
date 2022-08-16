@@ -17,5 +17,6 @@ namespace ProspectorInfo
         public bool AutoToggle { get; set; } = true;
         public int MapMode { get; set; } = 0;
         public string HeatMapOre { get; set; } = null;
+        public bool ShowGui { get; set; } = true;
     }
 }

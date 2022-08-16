@@ -23,6 +23,7 @@ namespace ProspectorInfo.Map
         static private readonly List<MapComponent> _components = new List<MapComponent>();
         static private ModConfig _config;
         static private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
+        static private GuiDialog _settingsDialog;
 
         private const string Filename = ProspectorInfoModSystem.DATAFILE;
         private readonly int _chunksize;
@@ -68,6 +69,8 @@ namespace ProspectorInfo.Map
                     _colorTextures[i]?.Dispose();
                     _colorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
                 }
+
+                _settingsDialog = new GuiProspectorInfoSetting(_clientApi, _config, RebuildMap);
             }
         }
 
@@ -89,16 +92,15 @@ namespace ProspectorInfo.Map
                     _config.Save(api);
                     break;
                 case "showgui":
-                    // Auto-sized dialog at the center of the screen
-                    ElementBounds dialogBounds = ElementStdBounds.AutosizedMainDialog.WithAlignment(EnumDialogArea.CenterMiddle);
+                    var guiToggleValue = args.PopBool();
+                    if (guiToggleValue.HasValue)
+                        _config.ShowGui = guiToggleValue.Value;
+                    else
+                        _config.ShowGui = !_config.ShowGui;
 
-                    // Just a simple 300x300 pixel box
-                    ElementBounds textBounds = ElementBounds.Fixed(0, 0, 300, 300);
-
-                    GuiComposer SingleComposer = _clientApi.Gui.CreateCompo("ProspectInfo Settings", dialogBounds)
-                        .AddStaticText("This is a piece of text at the center of your screen - Enjoy!", CairoFont.WhiteDetailText(), textBounds)
-                        .Compose()
-                    ;
+                    _config.Save(api);
+                    if (_worldMapManager.IsOpened)
+                        _settingsDialog.TryOpen();
                     break;
                 case "setcolor":
                     try
@@ -207,6 +209,9 @@ namespace ProspectorInfo.Map
                     {
                         case "showoverlay":
                             _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
+                            break;
+                        case "showgui":
+                            _clientApi.ShowChatMessage(".pi showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.");
                             break;
                         case "setcolor":
                             _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the overlay tiles.");
@@ -429,6 +434,16 @@ namespace ProspectorInfo.Map
         {
             _components.ForEach(c => c.Dispose());
             base.Dispose();
+        }
+
+        [HarmonyPatch(typeof(WorldMapManager), "ToggleMap")]
+        class WorldMapManagerPatch
+        {
+            static void Postfix(EnumDialogType asType)
+            {
+                if (_settingsDialog.IsOpened()) _settingsDialog.TryClose();
+                else if (_config.ShowGui) _settingsDialog.TryOpen();
+            }
         }
 
         [HarmonyPatch(typeof(ItemProspectingPick), "ProbeBlockDensityMode")]
