@@ -19,7 +19,8 @@ namespace ProspectorInfo.Map
             _rebuildMap = rebuildMap;
 
             IDictionary<string, string> oreValues = Vintagestory.API.Config.Lang.GetAllEntries();
-            oreValues.RemoveAll((key, val) => !key.Contains(":ore-") || key.CountChars('-') != 1);
+            // game:ore-lapis is a leftover and unused so it can be removed. See https://discord.com/channels/302152934249070593/351624415039193098/1009372460568805427
+            oreValues.RemoveAll((key, val) => !key.Contains(":ore-") || key.CountChars('-') != 1 || key.Contains("_") || key == "game:ore-lapis");
             _ores = oreValues.OrderBy((pair) => pair.Value).ToList();
             _ores.Insert(0, new KeyValuePair<string, string>(null, "All ores"));
 
@@ -40,9 +41,13 @@ namespace ProspectorInfo.Map
             ElementBounds mapModeBounds = ElementBounds.Fixed(35, 100, 120, 20);
             ElementBounds oreBounds = ElementBounds.Fixed(35, 130, 120, 20);
 
-            var currentHeatmapOreIndex = _ores.FindIndex((pair) => pair.Key != null && pair.Key.Contains(_config.HeatMapOre));
-            if (currentHeatmapOreIndex == -1)
-                currentHeatmapOreIndex = 0;
+            var currentHeatmapOreIndex = 0;
+            if (_config.HeatMapOre != null)
+            {
+                currentHeatmapOreIndex = _ores.FindIndex((pair) => pair.Key != null && pair.Key.Contains(_config.HeatMapOre));
+                if (currentHeatmapOreIndex == -1) // config.HeatMapOre is not a valid ore name -> reset to all ores
+                    currentHeatmapOreIndex = 0;
+            }
 
             SingleComposer = capi.Gui.CreateCompo("ProspectorInfo Settings", dialogBounds)
                 .AddShadedDialogBG(backgroundBounds)
