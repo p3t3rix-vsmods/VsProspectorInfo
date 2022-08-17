@@ -217,6 +217,16 @@ namespace ProspectorInfo.Map
                             _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the overlay tiles.");
                             _clientApi.ShowChatMessage("Command version of config \"TextureColor\". Default config: 7 52 91 50");
                             break;
+                        case "setlowheatcolor":
+                            _clientApi.ShowChatMessage(".pi setlowheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the low heat RGBA color of the overlay tiles for the heatmap.");
+                            _clientApi.ShowChatMessage("Gets blended with \"sethighheatcolor\" based on the relative density of a ore");
+                            _clientApi.ShowChatMessage("Command version of config \"setlowheatcolor\". Default config: 85 85 181 128");
+                            break;
+                        case "sethighheatcolor":
+                            _clientApi.ShowChatMessage(".pi sethighheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the high heat RGBA color of the overlay tiles for the heatmap.");
+                            _clientApi.ShowChatMessage("Gets blended with \"setlowheatcolor\" based on the relative density of a ore");
+                            _clientApi.ShowChatMessage("Command version of config \"sethighheatcolor\". Default config: 168 34 36 128");
+                            break;
                         case "setbordercolor":
                             _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the tile outlines.");
                             _clientApi.ShowChatMessage("Command version of config \"BorderColor\". Default config: 0 0 0 200");
@@ -229,13 +239,27 @@ namespace ProspectorInfo.Map
                             _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
                             _clientApi.ShowChatMessage("Command version of config \"RenderBorder\". Default config: true");
                             break;
+                        case "mode":
+                            _clientApi.ShowChatMessage(".pi mode [0-1] - Sets the map mode");
+                            _clientApi.ShowChatMessage("Supported modes: 0 (Default) and 1 (Heatmap)");
+                            break;
+                        case "heatmapore":
+                            _clientApi.ShowChatMessage(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore");
+                            _clientApi.ShowChatMessage("No argument resets the heatmap back to all ores. Can only handle the english name of an ore without spaces.");
+                            _clientApi.ShowChatMessage("E.g. cassiterite, bituminouscoal, nativecopper");
+                            break;
                         default:
                             _clientApi.ShowChatMessage(".pi - Defaults to \"showoverlay\" without arguments.");
                             _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
+                            _clientApi.ShowChatMessage(".pi showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.");
                             _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the overlay tiles.");
+                            _clientApi.ShowChatMessage(".pi setlowheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the low heat RGBA color of the overlay tiles for the heatmap.");
+                            _clientApi.ShowChatMessage(".pi sethighheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the high heat RGBA color of the overlay tiles for the heatmap.");
                             _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the tile outlines.");
                             _clientApi.ShowChatMessage(".pi setborderthickness [int] - Sets the tile outline's thickness.");
                             _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
+                            _clientApi.ShowChatMessage(".pi mode [0-1] - Sets the map mode");
+                            _clientApi.ShowChatMessage(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore");
                             _clientApi.ShowChatMessage(".pi help [command] - Shows command's help. Defaults to listing .pi subcommands.");
                             break;
                     }
