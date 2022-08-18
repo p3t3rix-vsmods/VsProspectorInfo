@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using Foundation.Extensions;
 using HarmonyLib;
@@ -9,21 +10,20 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
-using Vintagestory.API.Server;
-using Vintagestory.API.Util;
 using Vintagestory.GameContent;
 
 namespace ProspectorInfo.Map
 {
-    internal class ProspectorOverlayLayer : MapLayer
+    class ProspectorOverlayLayer : MapLayer
     {
         // They have to be static so the PrintProbeResultsPatch postfix can access them
         static private ICoreClientAPI _clientApi;
-        static private ProspectorMessages _prospectInfos;
+        static private ProspectorInfos _prospectInfos;
         static private readonly List<MapComponent> _components = new List<MapComponent>();
         static private ModConfig _config;
         static private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
         static private GuiDialog _settingsDialog;
+        static private ProspectInfo _currentProspectingInfo;
 
         private const string Filename = ProspectorInfoModSystem.DATAFILE;
         private readonly int _chunksize;
@@ -37,7 +37,7 @@ namespace ProspectorInfo.Map
         {
             _worldMapManager = mapSink;
             _chunksize = api.World.BlockAccessor.ChunkSize;
-            _prospectInfos = api.LoadOrCreateDataFile<ProspectorMessages>(Filename);
+            _prospectInfos = api.LoadOrCreateDataFile<ProspectorInfos>(Filename);
 
             var modSystem = this.api.ModLoader.GetModSystem<ProspectorInfoModSystem>();
             _config = modSystem.Config;
@@ -71,6 +71,15 @@ namespace ProspectorInfo.Map
                 }
 
                 _settingsDialog = new GuiProspectorInfoSetting(_clientApi, _config, RebuildMap);
+            }
+        }
+
+        public static void SetInfo(double ppt, double totalFactor, KeyValuePair<string, Vintagestory.API.Datastructures.IntDataMap2D> ore)
+        {
+            System.Diagnostics.Debug.WriteLine(ore.Key + " ppt: " + ppt + ", total: " + totalFactor);
+            if (_currentProspectingInfo != null && totalFactor > 0.002)
+            {
+                _currentProspectingInfo.AddDepositValues(totalFactor, ppt, ore.Key);
             }
         }
 
@@ -484,24 +493,49 @@ namespace ProspectorInfo.Map
         [HarmonyPatch(typeof(ItemProspectingPick), "PrintProbeResults")]
         class RealPrintProbeResultsPatch
         {
-            static void Postfix(IWorldAccessor world, IServerPlayer byPlayer, ItemSlot itemslot, BlockPos pos)
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                if (world.Side == EnumAppSide.Client || _clientApi?.World?.Player == null)
-                    return;
+                var code = new List<CodeInstruction>(instructions);
+                var insertionIndex = -1;
+                for (int i = 0; i < code.Count; i++)
+                    if (code[i].opcode == OpCodes.Stelem_Ref && code[i + 1].opcode == OpCodes.Stloc_S)
+                    {
+                        insertionIndex = i + 2;
+                        break;
+                    }
 
-                ProPickWorkSpace _proPickWorkSpace = ObjectCacheUtil.GetOrCreate(world.Api, "propickworkspace", () =>
+                if (insertionIndex != -1)
                 {
-                    ProPickWorkSpace ppws = new ProPickWorkSpace();
-                    ppws.OnLoaded(world.Api);
-                    return ppws;
-                });
+                    var instructionsToInsert = new List<CodeInstruction>
+                    {
+                        new CodeInstruction(OpCodes.Ldloc_S, (sbyte)14),
+                        new CodeInstruction(OpCodes.Ldloc_S, (sbyte)15),
+                        new CodeInstruction(OpCodes.Ldloc_S, (sbyte)9),
+                        new CodeInstruction(OpCodes.Call, typeof(ProspectorOverlayLayer).GetMethod("SetInfo"))
+                    };
 
-                int _chunkSize = world.BlockAccessor.ChunkSize;
+                    code.InsertRange(insertionIndex, instructionsToInsert);
+                }
+                return code;
+            }
+
+            static void Prefix(BlockPos pos)
+            {
+                int _chunkSize = _clientApi.World.BlockAccessor.ChunkSize;
                 int posX = pos.X / _chunkSize;
                 int posZ = pos.Z / _chunkSize;
 
                 _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
-                _prospectInfos.Add(new ProspectInfo(pos, _chunkSize, world.Api as ICoreServerAPI, _proPickWorkSpace));
+                _currentProspectingInfo = new ProspectInfo(posX, posZ);
+                _prospectInfos.Add(_currentProspectingInfo);
+            }
+
+            static void Postfix(BlockPos pos)
+            {
+                int _chunkSize = _clientApi.World.BlockAccessor.ChunkSize;
+                int posX = pos.X / _chunkSize;
+                int posZ = pos.Z / _chunkSize;
+
                 _clientApi.SaveDataFile(Filename, _prospectInfos);
 
                 _components.RemoveAll(component =>

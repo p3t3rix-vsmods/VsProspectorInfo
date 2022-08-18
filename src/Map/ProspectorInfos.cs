@@ -2,7 +2,7 @@
 
 namespace ProspectorInfo.Map
 {
-    class ProspectorMessages : List<ProspectInfo>
+    class ProspectorInfos : List<ProspectInfo>
     {
     }
 }

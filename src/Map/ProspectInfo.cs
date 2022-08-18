@@ -1,13 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-using Vintagestory.API.Common;
 using Vintagestory.API.Config;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
-using Vintagestory.API.Server;
-using Vintagestory.GameContent;
-using Vintagestory.ServerMods;
 
 namespace ProspectorInfo.Map
 {
@@ -31,12 +26,11 @@ namespace ProspectorInfo.Map
                 Values = new List<OreOccurence>();
         }
 
-        public ProspectInfo(BlockPos pos, int chunkSize, ICoreServerAPI api, ProPickWorkSpace ppws)
+        public ProspectInfo(int x, int z)
         {
-            X = pos.X / chunkSize;
-            Z = pos.Z / chunkSize;
+            X = x;
+            Z = z;
             Values = new List<OreOccurence>();
-            GetDepositValues(pos, api, ppws);
         }
 
         public bool Equals(ProspectInfo other)
@@ -85,8 +79,11 @@ namespace ProspectorInfo.Map
                         traceCount++;
                     }
                 }
-                sb.Append(Lang.Get("Miniscule amounts of {0}", sbTrace.ToString()));
-                sb.AppendLine();
+                if (sbTrace.Length != 0)
+                {
+                    sb.Append(Lang.Get("Miniscule amounts of {0}", sbTrace.ToString()));
+                    sb.AppendLine();
+                }  
             }
             else
             {
@@ -108,43 +105,15 @@ namespace ProspectorInfo.Map
             return RelativeDensity.Zero;
         }
 
-        private void GetDepositValues(BlockPos pos, ICoreServerAPI api, ProPickWorkSpace ppws)
+        public void AddDepositValues(double totalFactor, double ppt, string name)
         {
-            DepositVariant[] deposits = api.ModLoader.GetModSystem<GenDeposits>()?.Deposits;
-            if (deposits == null) return;
-
-            IBlockAccessor blockAccess = api.World.BlockAccessor;
-            int regsize = blockAccess.RegionSize;
-
-            IMapRegion reg = api.World.BlockAccessor.GetMapRegion(pos.X / regsize, pos.Z / regsize);
-            int lx = pos.X % regsize;
-            int lz = pos.Z % regsize;
-
-            pos = pos.Copy();
-            pos.Y = api.World.BlockAccessor.GetTerrainMapheightAt(pos);
-
-            int[] blockColumn = ppws.GetRockColumn(pos.X, pos.Z);
-
-            foreach (var val in reg.OreMaps)
+            if (totalFactor > 0.025)
             {
-                IntDataMap2D map = val.Value;
-                int noiseSize = map.InnerSize;
-
-                float posXInRegionOre = (float)lx / regsize * noiseSize;
-                float posZInRegionOre = (float)lz / regsize * noiseSize;
-
-                int oreDist = map.GetUnpaddedColorLerped(posXInRegionOre, posZInRegionOre);
-
-                ppws.depositsByCode[val.Key].GetPropickReading(pos, oreDist, blockColumn, out double ppt, out double totalFactor);
-
-                if (totalFactor > 0.025)
-                {
-                    Values.Add(new OreOccurence(val.Key, (RelativeDensity)((int)GameMath.Clamp(totalFactor * 7.5f, 0, 5) + 2), ppt));
-                }
-                else if (totalFactor > 0.002)
-                {
-                    Values.Add(new OreOccurence(val.Key, RelativeDensity.Miniscule, totalFactor));
-                }
+                Values.Add(new OreOccurence(name, (RelativeDensity)((int)GameMath.Clamp(totalFactor * 7.5f, 0, 5) + 2), ppt));
+            }
+            else
+            {
+                Values.Add(new OreOccurence(name, RelativeDensity.Miniscule, ppt));
             }
             Values.Sort(delegate (OreOccurence it, OreOccurence other) { return other.relativeDensity - it.relativeDensity; });
         }
