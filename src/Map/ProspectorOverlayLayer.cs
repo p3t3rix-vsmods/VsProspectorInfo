@@ -76,11 +76,8 @@ namespace ProspectorInfo.Map
 
         public static void SetInfo(double ppt, double totalFactor, KeyValuePair<string, Vintagestory.API.Datastructures.IntDataMap2D> ore)
         {
-            System.Diagnostics.Debug.WriteLine(ore.Key + " ppt: " + ppt + ", total: " + totalFactor);
             if (_currentProspectingInfo != null && totalFactor > 0.002)
-            {
                 _currentProspectingInfo.AddDepositValues(totalFactor, ppt, ore.Key);
-            }
         }
 
 
