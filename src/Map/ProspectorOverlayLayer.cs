@@ -249,8 +249,8 @@ namespace ProspectorInfo.Map
                             break;
                         case "heatmapore":
                             _clientApi.ShowChatMessage(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore");
-                            _clientApi.ShowChatMessage("No argument resets the heatmap back to all ores. Can only handle the english name of an ore without spaces.");
-                            _clientApi.ShowChatMessage("E.g. cassiterite, bituminouscoal, nativecopper");
+                            _clientApi.ShowChatMessage("No argument resets the heatmap back to all ores. Can only handle the ore name in your selected language or the ore tag.");
+                            _clientApi.ShowChatMessage("E.g. game:ore-emerald, game:ore-bituminouscoal, Cassiterite");
                             break;
                         default:
                             _clientApi.ShowChatMessage(".pi - Defaults to \"showoverlay\" without arguments.");
