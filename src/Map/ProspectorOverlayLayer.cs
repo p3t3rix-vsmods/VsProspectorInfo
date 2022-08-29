@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using Foundation.Extensions;
 using Foundation.Utils;
 using HarmonyLib;
@@ -20,15 +19,15 @@ namespace ProspectorInfo.Map
     {
         private const string Filename = ProspectorInfoModSystem.DATAFILE;
         private readonly string[] _triggerwords;
-        private readonly ProspectorMessages _messages;
+        private readonly ProspectorMessages _prospectInfos;
         private readonly int _chunksize;
         private readonly ICoreClientAPI _clientApi;
         private readonly List<MapComponent> _components = new List<MapComponent>();
         private readonly IWorldMapManager _worldMapManager;
-        private readonly Regex _cleanupRegex;
-        private readonly ModConfig _config;
-        private LoadedTexture _colorTexture;
+        private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
         private bool _temporaryRenderOverride = false;
+        private static ModConfig _config;
+        private static GuiDialog _settingsDialog;
 
         public override string Title => "ProspectorOverlay";
         public override EnumMapAppSide DataSide => EnumMapAppSide.Client;
@@ -39,9 +38,8 @@ namespace ProspectorInfo.Map
         {
             _worldMapManager = mapSink;
             _chunksize = api.World.BlockAccessor.ChunkSize;
-            _messages = api.LoadOrCreateDataFile<ProspectorMessages>(Filename);
+            _prospectInfos = api.LoadOrCreateDataFile<ProspectorMessages>(Filename);
             _triggerwords = LangUtils.GetAllLanguageStringsOfKey("propick-reading-title").Select(x => x.Split().FirstOrDefault()).Where(x => !string.IsNullOrEmpty(x)).ToArray();
-            _cleanupRegex = new Regex("<.*?>", RegexOptions.Compiled);
 
             var modSystem = this.api.ModLoader.GetModSystem<ProspectorInfoModSystem>();
             _config = modSystem.Config;
@@ -70,8 +68,13 @@ namespace ProspectorInfo.Map
 
                 _clientApi.RegisterCommand("pi", "ProspectorInfo main command. Allows you to toggle the visibility of the chunk texture overlay.", "", OnPiCommand);
 
-                _colorTexture?.Dispose();
-                _colorTexture = GenerateOverlayTexture();
+                for (int i = 0; i < _colorTextures.Length; i++)
+                {
+                    _colorTextures[i]?.Dispose();
+                    _colorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
+                }
+
+                _settingsDialog = new GuiProspectorInfoSetting(_clientApi, _config, RebuildMap);
             }
         }
 
@@ -92,11 +95,58 @@ namespace ProspectorInfo.Map
 
                     _config.Save(api);
                     break;
+                case "showgui":
+                    var guiToggleValue = args.PopBool();
+                    if (guiToggleValue.HasValue)
+                        _config.ShowGui = guiToggleValue.Value;
+                    else
+                        _config.ShowGui = !_config.ShowGui;
+
+                    _config.Save(api);
+                    if (_worldMapManager.IsOpened)
+                        _settingsDialog.TryOpen();
+                    break;
                 case "setcolor":
                     try
                     {
                         var newColor = TrySetRGBAValues(args, _config.TextureColor);
                         _config.TextureColor = newColor;
+                        _config.Save(api);
+
+                        RebuildMap(true);
+                    }
+                    catch (FormatException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    catch (ArgumentException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    break;
+                case "setlowheatcolor":
+                    try
+                    {
+                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
+                        _config.LowHeatColor = newColor;
+                        _config.Save(api);
+
+                        RebuildMap(true);
+                    }
+                    catch (FormatException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    catch (ArgumentException e)
+                    {
+                        _clientApi.ShowChatMessage(e.Message);
+                    }
+                    break;
+                case "sethighheatcolor":
+                    try
+                    {
+                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
+                        _config.HighHeatColor = newColor;
                         _config.Save(api);
 
                         RebuildMap(true);
@@ -142,15 +192,44 @@ namespace ProspectorInfo.Map
 
                     RebuildMap(true);
                     break;
+                case "mode":
+                    var newMode = args.PopInt(2).Value;
+                    _config.MapMode = newMode;
+                    _config.Save(api);
+
+                    RebuildMap(true);
+                    break;
+                case "heatmapore":
+                    var oreName = args.PopAll();
+                    if (oreName.Trim() == "" || oreName.Trim() == "null")
+                        oreName = null;
+                    _config.HeatMapOre = oreName;
+                    _config.Save(api);
+
+                    RebuildMap(true);
+                    break;
                 case "help":
                     switch (args.PopWord(""))
                     {
                         case "showoverlay":
                             _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
                             break;
+                        case "showgui":
+                            _clientApi.ShowChatMessage(".pi showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.");
+                            break;
                         case "setcolor":
                             _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the overlay tiles.");
                             _clientApi.ShowChatMessage("Command version of config \"TextureColor\". Default config: 7 52 91 50");
+                            break;
+                        case "setlowheatcolor":
+                            _clientApi.ShowChatMessage(".pi setlowheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the low heat RGBA color of the overlay tiles for the heatmap.");
+                            _clientApi.ShowChatMessage("Gets blended with \"sethighheatcolor\" based on the relative density of a ore");
+                            _clientApi.ShowChatMessage("Command version of config \"setlowheatcolor\". Default config: 85 85 181 128");
+                            break;
+                        case "sethighheatcolor":
+                            _clientApi.ShowChatMessage(".pi sethighheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the high heat RGBA color of the overlay tiles for the heatmap.");
+                            _clientApi.ShowChatMessage("Gets blended with \"setlowheatcolor\" based on the relative density of a ore");
+                            _clientApi.ShowChatMessage("Command version of config \"sethighheatcolor\". Default config: 168 34 36 128");
                             break;
                         case "setbordercolor":
                             _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the tile outlines.");
@@ -164,13 +243,27 @@ namespace ProspectorInfo.Map
                             _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
                             _clientApi.ShowChatMessage("Command version of config \"RenderBorder\". Default config: true");
                             break;
+                        case "mode":
+                            _clientApi.ShowChatMessage(".pi mode [0-1] - Sets the map mode");
+                            _clientApi.ShowChatMessage("Supported modes: 0 (Default) and 1 (Heatmap)");
+                            break;
+                        case "heatmapore":
+                            _clientApi.ShowChatMessage(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore");
+                            _clientApi.ShowChatMessage("No argument resets the heatmap back to all ores. Can only handle the english name of an ore without spaces.");
+                            _clientApi.ShowChatMessage("E.g. cassiterite, bituminouscoal, nativecopper");
+                            break;
                         default:
                             _clientApi.ShowChatMessage(".pi - Defaults to \"showoverlay\" without arguments.");
                             _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
+                            _clientApi.ShowChatMessage(".pi showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.");
                             _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the overlay tiles.");
+                            _clientApi.ShowChatMessage(".pi setlowheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the low heat RGBA color of the overlay tiles for the heatmap.");
+                            _clientApi.ShowChatMessage(".pi sethighheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the high heat RGBA color of the overlay tiles for the heatmap.");
                             _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the tile outlines.");
                             _clientApi.ShowChatMessage(".pi setborderthickness [int] - Sets the tile outline's thickness.");
                             _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
+                            _clientApi.ShowChatMessage(".pi mode [0-1] - Sets the map mode");
+                            _clientApi.ShowChatMessage(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore");
                             _clientApi.ShowChatMessage(".pi help [command] - Shows command's help. Defaults to listing .pi subcommands.");
                             break;
                     }
@@ -266,10 +359,14 @@ namespace ProspectorInfo.Map
         #endregion
 
         #region Texture
-        private LoadedTexture GenerateOverlayTexture()
+        private LoadedTexture GenerateOverlayTexture(RelativeDensity? relativeDensity)
         {
             var colorTexture = new LoadedTexture(_clientApi, 0, _chunksize, _chunksize);
-            var colorArray = Enumerable.Repeat(_config.TextureColor.RGBA, _chunksize * _chunksize).ToArray();
+            int[] colorArray;
+            if (_config.MapMode == 1)
+                colorArray = Enumerable.Repeat(ColorUtil.ColorOverlay(_config.LowHeatColor.RGBA, _config.HighHeatColor.RGBA, 1 * (int)relativeDensity / 8.0f), _chunksize * _chunksize).ToArray();
+            else
+                colorArray = Enumerable.Repeat(_config.TextureColor.RGBA, _chunksize * _chunksize).ToArray();
 
             if (_config.RenderBorder)
             {
@@ -306,19 +403,28 @@ namespace ProspectorInfo.Map
             if (pos == null || groupId != GlobalConstants.InfoLogChatGroup || !_triggerwords.Any(triggerWord => message.StartsWith(triggerWord)))
                 return;
 
-            message = _cleanupRegex.Replace(message, string.Empty);
             var posX = pos.X / _chunksize;
             var posZ = pos.Z / _chunksize;
-            _messages.RemoveAll(m => m.X == posX && m.Z == posZ);
-            _messages.Add(new ProspectInfo(posX, posZ, message));
-            _clientApi.SaveDataFile(Filename, _messages);
+            _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
+            _prospectInfos.Add(new ProspectInfo(posX, posZ, message));
+            _clientApi.SaveDataFile(Filename, _prospectInfos);
 
             _components.RemoveAll(component =>
             {
                 var castComponent = component as ProspectorOverlayMapComponent;
                 return castComponent?.ChunkX == posX && castComponent.ChunkZ == posZ;
             });
-            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, message, _colorTexture);
+
+            RelativeDensity densityValue;
+            if (_config.HeatMapOre == null)
+                if (_prospectInfos.Last().Values != null && _prospectInfos.Last().Values.Count > 0)
+                    densityValue = _prospectInfos.Last().Values.First().RelativeDensity;
+                else
+                    densityValue = RelativeDensity.Zero;
+            else
+                densityValue = _prospectInfos.Last().GetValueOfOre(_config.HeatMapOre);
+
+            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, _prospectInfos.Last().GetMessage(), _colorTextures[(int)densityValue]);
             _components.Add(newComponent);
 
             blocksSinceLastSuccessList.Clear();
@@ -343,13 +449,24 @@ namespace ProspectorInfo.Map
 
             if (rebuildTexture)
             {
-                _colorTexture?.Dispose();
-                _colorTexture = GenerateOverlayTexture();
+                for (int i = 0; i < _colorTextures.Length; i++)
+                {
+                    _colorTextures[i]?.Dispose();
+                    _colorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
+                }
             }
 
-            foreach (var message in _messages)
+            foreach (var message in _prospectInfos)
             {
-                var component = new ProspectorOverlayMapComponent(_clientApi, message.X, message.Z, message.Message, _colorTexture);
+                RelativeDensity densityValue;
+                if (_config.HeatMapOre == null)
+                    if (message.Values != null && message.Values.Count > 0)
+                        densityValue = message.Values.First().RelativeDensity;
+                    else
+                        densityValue = RelativeDensity.Zero;
+                else
+                    densityValue = message.GetValueOfOre(_config.HeatMapOre);
+                var component = new ProspectorOverlayMapComponent(_clientApi, message.X, message.Z, message.GetMessage(), _colorTextures[(int)densityValue]);
                 _components.Add(component);
             }
         }
@@ -377,6 +494,26 @@ namespace ProspectorInfo.Map
         {
             _components.ForEach(c => c.Dispose());
             base.Dispose();
+        }
+
+        [HarmonyPatch(typeof(GuiDialogWorldMap), "TryClose")]
+        class GuiDialogWorldMapTryClosePatch
+        {
+            static void Postfix()
+            {
+                if (_settingsDialog.IsOpened()) 
+                    _settingsDialog.TryClose();
+            }
+        }
+
+        [HarmonyPatch(typeof(GuiDialogWorldMap), "Open")]
+        class GuiDialogWorldMapOpenPatch
+        {
+            static void Postfix()
+            {
+                if (_config.ShowGui) 
+                    _settingsDialog.TryOpen();
+            }
         }
 
         // ReSharper disable once UnusedType.Local
