@@ -416,16 +416,7 @@ namespace ProspectorInfo.Map
                 return castComponent?.ChunkX == posX && castComponent.ChunkZ == posZ;
             });
 
-            RelativeDensity densityValue;
-            if (_config.HeatMapOre == null)
-                if (newProspectInfo.Values != null && newProspectInfo.Values.Count > 0)
-                    densityValue = newProspectInfo.Values.First().RelativeDensity;
-                else
-                    densityValue = RelativeDensity.Zero;
-            else
-                densityValue = newProspectInfo.GetValueOfOre(_config.HeatMapOre);
-
-            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, newProspectInfo.GetMessage(), _colorTextures[(int)densityValue]);
+            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, newProspectInfo.GetMessage(), _colorTextures[(int)GetRelativeDensity(newProspectInfo)]);
             _components.Add(newComponent);
 
             blocksSinceLastSuccessList.Clear();
@@ -457,19 +448,22 @@ namespace ProspectorInfo.Map
                 }
             }
 
-            foreach (var message in _prospectInfos)
+            foreach (var info in _prospectInfos)
             {
-                RelativeDensity densityValue;
-                if (_config.HeatMapOre == null)
-                    if (message.Values != null && message.Values.Count > 0)
-                        densityValue = message.Values.First().RelativeDensity;
-                    else
-                        densityValue = RelativeDensity.Zero;
-                else
-                    densityValue = message.GetValueOfOre(_config.HeatMapOre);
-                var component = new ProspectorOverlayMapComponent(_clientApi, message.X, message.Z, message.GetMessage(), _colorTextures[(int)densityValue]);
+                var component = new ProspectorOverlayMapComponent(_clientApi, info.X, info.Z, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
                 _components.Add(component);
             }
+        }
+
+        private RelativeDensity GetRelativeDensity(ProspectInfo prospectInfo)
+        {
+            if (_config.HeatMapOre == null)
+                if (prospectInfo.Values != null && prospectInfo.Values.Count > 0)
+                    return prospectInfo.Values.First().RelativeDensity;
+                else
+                    return RelativeDensity.Zero;
+            else
+                return prospectInfo.GetValueOfOre(_config.HeatMapOre);
         }
 
         public override void OnMouseMoveClient(MouseEvent args, GuiElementMap mapElem, StringBuilder hoverText)
