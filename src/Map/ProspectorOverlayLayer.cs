@@ -405,8 +405,9 @@ namespace ProspectorInfo.Map
 
             var posX = pos.X / _chunksize;
             var posZ = pos.Z / _chunksize;
+            var newProspectInfo = new ProspectInfo(posX, posZ, message);
             _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
-            _prospectInfos.Add(new ProspectInfo(posX, posZ, message));
+            _prospectInfos.Add(newProspectInfo);
             _clientApi.SaveDataFile(Filename, _prospectInfos);
 
             _components.RemoveAll(component =>
@@ -417,14 +418,14 @@ namespace ProspectorInfo.Map
 
             RelativeDensity densityValue;
             if (_config.HeatMapOre == null)
-                if (_prospectInfos.Last().Values != null && _prospectInfos.Last().Values.Count > 0)
-                    densityValue = _prospectInfos.Last().Values.First().RelativeDensity;
+                if (newProspectInfo.Values != null && newProspectInfo.Values.Count > 0)
+                    densityValue = newProspectInfo.Values.First().RelativeDensity;
                 else
                     densityValue = RelativeDensity.Zero;
             else
-                densityValue = _prospectInfos.Last().GetValueOfOre(_config.HeatMapOre);
+                densityValue = newProspectInfo.GetValueOfOre(_config.HeatMapOre);
 
-            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, _prospectInfos.Last().GetMessage(), _colorTextures[(int)densityValue]);
+            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, newProspectInfo.GetMessage(), _colorTextures[(int)densityValue]);
             _components.Add(newComponent);
 
             blocksSinceLastSuccessList.Clear();
