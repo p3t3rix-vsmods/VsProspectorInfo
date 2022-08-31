@@ -122,7 +122,7 @@ namespace ProspectorInfo.Map
                 foundOres.Add(val.Name);
         }
 
-        public string GetMessage(bool withoutHandbook = true)
+        public string GetMessage()
         {
             StringBuilder sb = new StringBuilder();
 
@@ -138,18 +138,14 @@ namespace ProspectorInfo.Map
                     if (elem.RelativeDensity > RelativeDensity.Miniscule)
                     {
                         string proPickReading = Lang.Get("propick-reading", Lang.Get(densityStrings[(int)elem.RelativeDensity - 2]), elem.PageCode, Lang.Get(elem.Name), elem.AbsoluteDensity.ToString("0.#"));
-                        if (withoutHandbook)
-                            proPickReading = _cleanupRegex.Replace(proPickReading, string.Empty);
+                        proPickReading = _cleanupRegex.Replace(proPickReading, string.Empty);
                         sb.AppendLine(proPickReading);
                     }
                     else
                     {
                         if (traceCount > 0)
                             sbTrace.Append(", ");
-                        if (withoutHandbook)
-                            sbTrace.Append(Lang.Get(elem.Name));
-                        else
-                            sbTrace.Append(string.Format("<a href=\"handbook://{0}\">{1}</a>", elem.PageCode, Lang.Get(elem.Name)));
+                        sbTrace.Append(Lang.Get(elem.Name));
                         traceCount++;
                     }
                 }
