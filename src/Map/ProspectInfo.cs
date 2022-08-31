@@ -8,11 +8,11 @@ namespace ProspectorInfo.Map
 {
     internal class ProspectInfo
     {
-        public static IEnumerable<KeyValuePair<string, string>> FoundOres { get { return AllOres.Where((pair) => foundOres.Contains(pair.Value)); } }
+        public static IEnumerable<KeyValuePair<string, string>> FoundOres { get { return _allOres.Where((pair) => _foundOres.Contains(pair.Value)); } }
         
-        private static readonly Dictionary<string, string> AllOres = new OreNames();
-        private static readonly HashSet<string> foundOres = new HashSet<string>();
-        private static readonly List<string> densityStrings = new List<string>{ 
+        private static readonly Dictionary<string, string> _allOres = new OreNames();
+        private static readonly HashSet<string> _foundOres = new HashSet<string>();
+        private static readonly List<string> _densityStrings = new List<string>{ 
             "propick-density-verypoor",
             "propick-density-poor",
             "propick-density-decent",
@@ -20,7 +20,7 @@ namespace ProspectorInfo.Map
             "propick-density-veryhigh",
             "propick-density-ultrahigh"
         };
-        private static readonly Dictionary<string, RelativeDensity> translatedDensity = new Dictionary<string, RelativeDensity>{
+        private static readonly Dictionary<string, RelativeDensity> _translatedDensity = new Dictionary<string, RelativeDensity>{
             { Lang.Get("propick-density-verypoor"), RelativeDensity.VeryPoor },
             { Lang.Get("propick-density-poor"), RelativeDensity.Poor },
             { Lang.Get("propick-density-decent"), RelativeDensity.Decent },
@@ -59,7 +59,7 @@ namespace ProspectorInfo.Map
                 Values = new List<OreOccurence>();
             else
                 foreach (var val in values)
-                    foundOres.Add(val.Name);
+                    _foundOres.Add(val.Name);
         }
 
         public ProspectInfo(int x, int z, string message)
@@ -96,11 +96,11 @@ namespace ProspectorInfo.Map
                 Match match = _readingParsingRegex.Match(splits[i]);
                 if (match.Success)
                 {
-                    if (!translatedDensity.TryGetValue(match.Groups["relativeDensity"].Value, out RelativeDensity relativeDensity))
+                    if (!_translatedDensity.TryGetValue(match.Groups["relativeDensity"].Value, out RelativeDensity relativeDensity))
                         relativeDensity = RelativeDensity.Zero;
 
                     Values.Add(new OreOccurence(
-                        AllOres[match.Groups["oreName"].Value],
+                        _allOres[match.Groups["oreName"].Value],
                         match.Groups["pageCode"].Value,
                         relativeDensity,
                         double.Parse(match.Groups["absoluteDensity"].Value)
@@ -110,7 +110,7 @@ namespace ProspectorInfo.Map
                     MatchCollection matches = _tracesParsingRegex.Matches(splits[i]);
                     foreach (Match elem in matches)
                         Values.Add(new OreOccurence(
-                            AllOres[elem.Groups["oreName"].Value],
+                            _allOres[elem.Groups["oreName"].Value],
                             elem.Groups["pageCode"].Value,
                             RelativeDensity.Miniscule,
                             0
@@ -119,7 +119,7 @@ namespace ProspectorInfo.Map
             }
 
             foreach (var val in Values)
-                foundOres.Add(val.Name);
+                _foundOres.Add(val.Name);
         }
 
         public string GetMessage()
@@ -137,7 +137,7 @@ namespace ProspectorInfo.Map
                 {
                     if (elem.RelativeDensity > RelativeDensity.Miniscule)
                     {
-                        string proPickReading = Lang.Get("propick-reading", Lang.Get(densityStrings[(int)elem.RelativeDensity - 2]), elem.PageCode, Lang.Get(elem.Name), elem.AbsoluteDensity.ToString("0.#"));
+                        string proPickReading = Lang.Get("propick-reading", Lang.Get(_densityStrings[(int)elem.RelativeDensity - 2]), elem.PageCode, Lang.Get(elem.Name), elem.AbsoluteDensity.ToString("0.#"));
                         proPickReading = _cleanupRegex.Replace(proPickReading, string.Empty);
                         sb.AppendLine(proPickReading);
                     }
