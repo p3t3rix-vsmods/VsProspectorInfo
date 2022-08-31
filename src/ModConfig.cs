@@ -1,4 +1,5 @@
 ﻿using Foundation.ModConfig;
+using ProspectorInfo.Map;
 using ProspectorInfo.Models;
 
 namespace ProspectorInfo
@@ -15,7 +16,7 @@ namespace ProspectorInfo
         public int BorderThickness { get; set; } = 1;
         public bool RenderBorder { get; set; } = true;
         public bool AutoToggle { get; set; } = true;
-        public int MapMode { get; set; } = 0;
+        public MapMode MapMode { get; set; } = MapMode.Default;
         public string HeatMapOre { get; set; } = null;
         public bool ShowGui { get; set; } = true;
     }

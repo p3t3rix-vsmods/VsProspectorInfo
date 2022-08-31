@@ -60,7 +60,7 @@ namespace ProspectorInfo.Map
                 .AddDialogTitleBar("ProspectorInfo", OnCloseTitleBar)
                 .AddStaticText("Show overlay", CairoFont.WhiteDetailText(), showOverlayTextBounds)
                 .AddSwitch(OnSwitchOverlay, switchBounds, "showOverlaySwitch")
-                .AddDropDown(new string[] { "0", "1" }, new string[] { "Default", "Heatmap" }, _config.MapMode, OnMapModeSelected, mapModeBounds)
+                .AddDropDown(new string[] { "0", "1" }, new string[] { "Default", "Heatmap" }, (int)_config.MapMode, OnMapModeSelected, mapModeBounds)
                 .AddDropDown(_ores.Select((pair) => pair.Value).ToArray(), _ores.Select((pair) => pair.Key).ToArray(), currentHeatmapOreIndex, OnHeatmapOreSelected, oreBounds)
                 .Compose();
 
@@ -83,7 +83,7 @@ namespace ProspectorInfo.Map
 
         private void OnMapModeSelected(string code, bool selected)
         {
-            _config.MapMode = int.Parse(code);
+            _config.MapMode = (MapMode)int.Parse(code);
             _config.Save(capi);
             _rebuildMap(true);
         }

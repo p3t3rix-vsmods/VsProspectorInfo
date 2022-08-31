@@ -47,4 +47,10 @@ namespace ProspectorInfo.Map
         VeryHigh,
         UltraHigh
     }
+
+    public enum MapMode
+    {
+        Default,
+        Heatmap
+    }
 }

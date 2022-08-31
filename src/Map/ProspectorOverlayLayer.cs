@@ -194,7 +194,7 @@ namespace ProspectorInfo.Map
                     break;
                 case "mode":
                     var newMode = args.PopInt(2).Value;
-                    _config.MapMode = newMode;
+                    _config.MapMode = (MapMode)newMode;
                     _config.Save(api);
 
                     RebuildMap(true);
@@ -363,7 +363,7 @@ namespace ProspectorInfo.Map
         {
             var colorTexture = new LoadedTexture(_clientApi, 0, _chunksize, _chunksize);
             int[] colorArray;
-            if (_config.MapMode == 1)
+            if (_config.MapMode == MapMode.Heatmap)
                 colorArray = Enumerable.Repeat(ColorUtil.ColorOverlay(_config.LowHeatColor.RGBA, _config.HighHeatColor.RGBA, 1 * (int)relativeDensity / 8.0f), _chunksize * _chunksize).ToArray();
             else
                 colorArray = Enumerable.Repeat(_config.TextureColor.RGBA, _chunksize * _chunksize).ToArray();
