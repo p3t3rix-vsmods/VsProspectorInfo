@@ -408,7 +408,7 @@ namespace ProspectorInfo.Map
             var newProspectInfo = new ProspectInfo(posX, posZ, message);
             _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
             _prospectInfos.Add(newProspectInfo);
-            _clientApi.SaveDataFile(Filename, _prospectInfos);
+            _clientApi.SaveDataFile(Filename, _prospectInfos); //TODO saving the data every time is quite overkill. Should use a more efficient approach.
 
             _components.RemoveAll(component =>
             {

@@ -97,7 +97,6 @@ namespace ProspectorInfo.Map
                 // Sadly, applying the cleanup regex makes this message unparsable in the future.
                 Message = _cleanupRegex.Replace(message, string.Empty);
             }
-            
         }
 
         public bool Equals(ProspectInfo other)
