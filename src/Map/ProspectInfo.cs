@@ -20,7 +20,7 @@ namespace ProspectorInfo.Map
             "propick-density-veryhigh",
             "propick-density-ultrahigh"
         };
-        private static readonly Dictionary<string, RelativeDensity> _translatedDensity = new Dictionary<string, RelativeDensity>{
+        private static readonly Dictionary<string, RelativeDensity> _translatedDensities = new Dictionary<string, RelativeDensity>{
             { Lang.Get("propick-density-verypoor"), RelativeDensity.VeryPoor },
             { Lang.Get("propick-density-poor"), RelativeDensity.Poor },
             { Lang.Get("propick-density-decent"), RelativeDensity.Decent },
@@ -29,6 +29,7 @@ namespace ProspectorInfo.Map
             { Lang.Get("propick-density-ultrahigh"), RelativeDensity.UltraHigh }
         };
         private static readonly Regex _cleanupRegex = new Regex("<.*?>", RegexOptions.Compiled);
+        private static readonly Regex _headerParsingRegex = new Regex(Lang.Get("propick-reading-title", ".*?"), RegexOptions.Compiled);
         private static readonly Regex _readingParsingRegex = new Regex(
             Lang.Get("propick-reading", "[?<relativeDensity>.*?]", "[?<pageCode>.*?]", "[?<oreName>.*?]", "[?<absoluteDensity>.*?]")
                 .Replace("/", "\\/")
@@ -38,6 +39,10 @@ namespace ProspectorInfo.Map
                 .Replace("]", ")"), 
             RegexOptions.Compiled
         );
+
+        /// <summary>
+        /// A regex to extract every page code and ore name from a text. Can be used in every language
+        /// </summary>
         private static readonly Regex _tracesParsingRegex = new Regex(
             "<a href=\"handbook:\\/\\/(?<pageCode>.*?)\">(?<oreName>.*?)<\\/a>",
             RegexOptions.Compiled
@@ -45,8 +50,22 @@ namespace ProspectorInfo.Map
 
         public readonly int X;
         public readonly int Z;
+
+        /// <summary>
+        /// A sorted list of all ore occurencies in this chunk. The ore with the highest relative density is first.
+        /// </summary>
         public readonly List<OreOccurence> Values;
-        private readonly string Message; //Used for backwards compatibility
+
+        /// <summary>
+        /// The prospecting message that was send by the server. Used for backwards compatibitly and when parsing errors occur.
+        /// </summary>
+        private string Message;
+
+        /// <summary>
+        /// The return value from <see cref="GetMessage"/> if it was called at least once. Used to avoid multiple StringBuilder calls.
+        /// </summary>
+        [Newtonsoft.Json.JsonIgnore]
+        private string _messageCache;
 
         [Newtonsoft.Json.JsonConstructor]
         public ProspectInfo(int x, int z, string message, List<OreOccurence> values)
@@ -67,7 +86,18 @@ namespace ProspectorInfo.Map
             X = x;
             Z = z;
             Values = new List<OreOccurence>();
-            ParseMessage(message);
+            try
+            {
+                ParseMessage(message);
+            }
+            catch (System.Exception)
+            {
+                Values.Clear();
+                // TODO instead of just saving the message we could check every language to parse this message.
+                // Sadly, applying the cleanup regex makes this message unparsable in the future.
+                Message = _cleanupRegex.Replace(message, string.Empty);
+            }
+            
         }
 
         public bool Equals(ProspectInfo other)
@@ -88,21 +118,37 @@ namespace ProspectorInfo.Map
             }
         }
 
+        /// <summary>
+        /// Tries to parse the given <paramref name="message"/> in the current locale. If the locale of <paramref name="message"/> is not equal to the current locale,
+        /// the message is just saved as is without parsing.
+        /// If any of the exceptions below is thrown, <see cref="Values"/> should be cleared and <paramref name="message"/> should be saved to <see cref="Message"/>.
+        /// </summary>
+        /// <param name="message">The prospecting string received from the server</param>
+        /// <exception cref="KeyNotFoundException">If a parsed ore name can not be found in oreNames or the density in translatedDensities</exception>
+        /// <exception cref="System.ArgumentNullException"></exception>
+        /// <exception cref="System.FormatException"></exception>
         private void ParseMessage(string message)
         {
-            var splits = message.Split('\n');
-            for (var i = 1; i < splits.Length - 1; i++)
+            string[] splits = message.Split('\n');
+
+            // If header can not be matched, we are receiving a different locale than our current one is.
+            if (!_headerParsingRegex.IsMatch(splits[0]))
+            {
+                // TODO instead of just saving the message we could check every language to parse this message.
+                // Sadly, applying the cleanup regex makes this message unparsable in the future.
+                Message = _cleanupRegex.Replace(message, string.Empty);
+                return;
+            }
+
+            for (int i = 1; i < splits.Length - 1; i++)
             {
                 Match match = _readingParsingRegex.Match(splits[i]);
                 if (match.Success)
                 {
-                    if (!_translatedDensity.TryGetValue(match.Groups["relativeDensity"].Value, out RelativeDensity relativeDensity))
-                        relativeDensity = RelativeDensity.Zero;
-
                     Values.Add(new OreOccurence(
                         _allOres[match.Groups["oreName"].Value],
                         match.Groups["pageCode"].Value,
-                        relativeDensity,
+                        _translatedDensities[match.Groups["relativeDensity"].Value],
                         double.Parse(match.Groups["absoluteDensity"].Value)
                     ));
                 } else
@@ -124,6 +170,9 @@ namespace ProspectorInfo.Map
 
         public string GetMessage()
         {
+            if (_messageCache != null)
+                return _messageCache;
+
             StringBuilder sb = new StringBuilder();
 
             if (Values.Count > 0)
@@ -162,7 +211,9 @@ namespace ProspectorInfo.Map
                 else
                     sb.Append(Lang.Get("propick-noreading"));
             }
-            return sb.ToString();
+
+            _messageCache = sb.ToString();
+            return _messageCache;
         }
 
         public RelativeDensity GetValueOfOre(string oreName)
