@@ -59,6 +59,7 @@ namespace ProspectorInfo.Map
         /// <summary>
         /// The prospecting message that was send by the server. Used for backwards compatibitly and when parsing errors occur.
         /// </summary>
+        [Newtonsoft.Json.JsonProperty]
         private string Message;
 
         /// <summary>
