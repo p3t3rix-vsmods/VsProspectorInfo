@@ -12,6 +12,7 @@ Just drop the file into your mods folder. You just need this mod on the client, 
     .pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Set's the value of the BorderColor field in the config & rebuilds the texture.
     .pi setborderthickness [number] - Set the BorderThickness value in the config & rebuilds the texture.
     .pi toggleborder [true,false] - Set's the `RenderBorder` value in the config & rebuilds the texture.
+    .pi showgui - Shows the GUI where you can configure the mode (default or heatmap) and select the ore that should be heatmapped
 
 ## Configuration
 
@@ -30,6 +31,22 @@ The mod renders a transparent square of all chunks that have been prospected. If
 After prospecting, the info will be displayed in the tooltip of the minimap when hovering over the chunk. This info is stored in %Vintage_Story_Data%/ModData/YourWorldId/vsprospectorinfo.data and is client side only.
 
 ![image](https://user-images.githubusercontent.com/5238284/79952656-09e3f680-847b-11ea-96c9-b4cb9b47355f.png)
+
+### Heatmap
+
+A map mode that displays the relative density of the ores on the map via a color gradient. Can be enabled/disabled and switched between displaying the density of just one ore and displaying the density of all ores (The highest density per chunk is picked).
+
+Normal map (map mode 0)
+![map](https://user-images.githubusercontent.com/24532072/168427928-96b134aa-288d-4d4c-ade6-ddcb002c6d51.png)
+
+
+Heatmap (map mode 1)
+![heatmap](https://user-images.githubusercontent.com/24532072/168427930-571788d3-eca5-4cbb-b6d6-caf2c6b9bcd1.png)
+
+
+Heatmap for Cassiterite only (map mode 1; heatmapore Cassiterite)
+![heatmapCassiterite](https://user-images.githubusercontent.com/24532072/168427932-9fd7020f-3248-4708-8f68-25a082a86bd2.png)
+
 
 
 ## Compiling
