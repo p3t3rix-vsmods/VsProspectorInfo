@@ -136,9 +136,9 @@ namespace ProspectorInfo.Map
             // We have to remove the header before splitting as some languages (looking at you Slovensky) have a line break in their header
             string[] splits = message.Replace(headerMatch.Value, string.Empty).Split('\n');
 
-            for (int i = 0; i < splits.Length - 1; i++)
+            foreach (var reading in splits)
             {
-                Match match = _readingParsingRegex.Match(splits[i]);
+                Match match = _readingParsingRegex.Match(reading);
                 if (match.Success)
                 {
                     Values.Add(new OreOccurence(
@@ -149,7 +149,7 @@ namespace ProspectorInfo.Map
                     ));
                 } else
                 {
-                    MatchCollection matches = _tracesParsingRegex.Matches(splits[i]);
+                    MatchCollection matches = _tracesParsingRegex.Matches(reading);
                     foreach (Match elem in matches)
                         Values.Add(new OreOccurence(
                             _allOres[elem.Groups["oreName"].Value],
