@@ -496,18 +496,19 @@ namespace ProspectorInfo.Map
         {
             static void Postfix()
             {
-                if (_settingsDialog.IsOpened()) 
-                    _settingsDialog.TryClose();
+                _settingsDialog.TryClose();
             }
         }
 
         [HarmonyPatch(typeof(GuiDialogWorldMap), "Open")]
         class GuiDialogWorldMapOpenPatch
         {
-            static void Postfix()
+            static void Postfix(EnumDialogType type)
             {
-                if (_config.ShowGui) 
+                if (_config.ShowGui && type == EnumDialogType.Dialog) 
                     _settingsDialog.TryOpen();
+                else
+                    _settingsDialog.TryClose();
             }
         }
 
