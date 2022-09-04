@@ -74,11 +74,16 @@ namespace ProspectorInfo.Map
             Z = z;
             Values = values;
             Message = message;
-            if (values == null)
+            if (message != null) // ProspectInfo is legacy style message
+            {
                 Values = new List<OreOccurence>();
+                ParseLegacyMessage();
+            } 
             else
+            {
                 foreach (var val in values)
                     _foundOres.Add(val.Name);
+            }            
         }
 
         public ProspectInfo(int x, int z, string message)
@@ -92,9 +97,8 @@ namespace ProspectorInfo.Map
             }
             catch (System.Exception)
             {
-                Values.Clear();
-                // TODO instead of just saving the message we could check every language to parse this message.
-                // Sadly, applying the cleanup regex makes this message unparsable in the future.
+                Values = null;
+                // We just save the message as it will be parsed correctly on the next load anyway.
                 Message = _cleanupRegex.Replace(message, string.Empty);
             }
         }
@@ -165,6 +169,84 @@ namespace ProspectorInfo.Map
 
             foreach (var val in Values)
                 _foundOres.Add(val.Name);
+        }
+
+        /// <summary>
+        /// Parses the legacy style messages (From VsProspectorInfo versions < 4.0.0).
+        /// Should only be called on load since it is significantly slower than <see cref="ParseMessage(string)"/>.
+        /// Checks every language to parse <see cref="Message"/> and sets the field to null afterwards.
+        /// If no language can be matched to the Message, nothing happens.
+        /// </summary>
+        private void ParseLegacyMessage()
+        {
+            string[] splits = null;
+            string langCode = null;
+
+            foreach (var language in Lang.AvailableLanguages.Keys)
+            {
+                var langRegex = new Regex(Lang.GetL(language, "propick-reading-title", ".*?"));
+                var langMatch = langRegex.Match(Message);
+                if (langMatch.Success)
+                {
+                    splits = Message.Replace(langMatch.Value, string.Empty).Split('\n');
+                    langCode = language;
+                    break;
+                }    
+            }
+
+            if (langCode == null)
+                return;
+
+            var ores = new Dictionary<string, string>();
+            foreach (var ore in _allOres)
+                ores[Lang.GetL(langCode, ore.Value)] = ore.Value;
+
+            Dictionary<string, RelativeDensity> _relativeDensities = new Dictionary<string, RelativeDensity>{
+                { Lang.GetL(langCode, "propick-density-verypoor"), RelativeDensity.VeryPoor },
+                { Lang.GetL(langCode, "propick-density-poor"), RelativeDensity.Poor },
+                { Lang.GetL(langCode, "propick-density-decent"), RelativeDensity.Decent },
+                { Lang.GetL(langCode, "propick-density-high"), RelativeDensity.High },
+                { Lang.GetL(langCode, "propick-density-veryhigh"), RelativeDensity.VeryHigh },
+                { Lang.GetL(langCode, "propick-density-ultrahigh"), RelativeDensity.UltraHigh }
+            };
+
+            for (int i = 1; i < splits.Length; i++)
+            {
+                RelativeDensity relativeDensity = RelativeDensity.Zero;
+
+                foreach (var density in _relativeDensities)
+                {
+                    if (splits[i].Contains(density.Key))
+                    {
+                        relativeDensity = density.Value;
+                        break;
+                    }
+                }
+
+                if (relativeDensity != RelativeDensity.Zero) 
+                {
+                    Regex absoluteDensityRegex = new Regex("([0-9]+,?[0-9]*)");
+                    double absoluteDensity = double.Parse(absoluteDensityRegex.Match(splits[i]).Value);
+
+                    string oreName = null;
+                    foreach (var ore in ores)
+                        if (splits[i].Contains(ore.Key))
+                        {
+                            oreName = ore.Value;
+                            break;
+                        }
+
+                    Values.Add(new OreOccurence(oreName, null, relativeDensity, absoluteDensity));
+                }
+                else // if it is RelativeDensity.Zero we are checking miniscule amounts
+                {
+                    foreach (var ore in ores)
+                        if (splits[i].Contains(ore.Key))
+                            Values.Add(new OreOccurence(ore.Value, null, RelativeDensity.Miniscule, 0));
+                }
+            }
+
+            Message = null;
         }
 
         public string GetMessage()
