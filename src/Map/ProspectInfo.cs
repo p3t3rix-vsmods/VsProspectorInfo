@@ -136,7 +136,7 @@ namespace ProspectorInfo.Map
             // We have to remove the header before splitting as some languages (looking at you Slovensky) have a line break in their header
             string[] splits = message.Replace(headerMatch.Value, string.Empty).Split('\n');
 
-            for (int i = 1; i < splits.Length - 1; i++)
+            for (int i = 0; i < splits.Length - 1; i++)
             {
                 Match match = _readingParsingRegex.Match(splits[i]);
                 if (match.Success)
