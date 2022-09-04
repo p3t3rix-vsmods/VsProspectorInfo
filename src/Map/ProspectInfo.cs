@@ -1,16 +1,102 @@
-﻿namespace ProspectorInfo.Map
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using Vintagestory.API.Config;
+
+namespace ProspectorInfo.Map
 {
     internal class ProspectInfo
     {
+        public static IEnumerable<KeyValuePair<string, string>> FoundOres { get { return _allOres.Where((pair) => _foundOres.Contains(pair.Value)); } }
+        
+        private static readonly Dictionary<string, string> _allOres = new OreNames();
+        private static readonly HashSet<string> _foundOres = new HashSet<string>();
+        private static readonly List<string> _densityStrings = new List<string>{ 
+            "propick-density-verypoor",
+            "propick-density-poor",
+            "propick-density-decent",
+            "propick-density-high",
+            "propick-density-veryhigh",
+            "propick-density-ultrahigh"
+        };
+        private static readonly Dictionary<string, RelativeDensity> _translatedDensities = new Dictionary<string, RelativeDensity>{
+            { Lang.Get("propick-density-verypoor"), RelativeDensity.VeryPoor },
+            { Lang.Get("propick-density-poor"), RelativeDensity.Poor },
+            { Lang.Get("propick-density-decent"), RelativeDensity.Decent },
+            { Lang.Get("propick-density-high"), RelativeDensity.High },
+            { Lang.Get("propick-density-veryhigh"), RelativeDensity.VeryHigh },
+            { Lang.Get("propick-density-ultrahigh"), RelativeDensity.UltraHigh }
+        };
+        private static readonly Regex _cleanupRegex = new Regex("<.*?>", RegexOptions.Compiled);
+        private static readonly Regex _headerParsingRegex = new Regex(Lang.Get("propick-reading-title", ".*?"), RegexOptions.Compiled);
+        private static readonly Regex _readingParsingRegex = new Regex(
+            Lang.Get("propick-reading", "[?<relativeDensity>.*?]", "[?<pageCode>.*?]", "[?<oreName>.*?]", "[?<absoluteDensity>.*?]")
+                .Replace("/", "\\/")
+                .Replace("(", "\\(")
+                .Replace(")", "\\)")
+                .Replace("[", "(")
+                .Replace("]", ")"), 
+            RegexOptions.Compiled
+        );
+
+        /// <summary>
+        /// A regex to extract every page code and ore name from a text. Can be used in every language
+        /// </summary>
+        private static readonly Regex _tracesParsingRegex = new Regex(
+            "<a href=\"handbook:\\/\\/(?<pageCode>.*?)\">(?<oreName>.*?)<\\/a>",
+            RegexOptions.Compiled
+        );
+
         public readonly int X;
         public readonly int Z;
-        public string Message;
+
+        /// <summary>
+        /// A sorted list of all ore occurencies in this chunk. The ore with the highest relative density is first.
+        /// </summary>
+        public readonly List<OreOccurence> Values;
+
+        /// <summary>
+        /// The prospecting message that was send by the server. Used for backwards compatibitly and when parsing errors occur.
+        /// </summary>
+        private string Message;
+
+        /// <summary>
+        /// The return value from <see cref="GetMessage"/> if it was called at least once. Used to avoid multiple StringBuilder calls.
+        /// </summary>
+        [Newtonsoft.Json.JsonIgnore]
+        private string _messageCache;
+
+        [Newtonsoft.Json.JsonConstructor]
+        public ProspectInfo(int x, int z, string message, List<OreOccurence> values)
+        {
+            X = x;
+            Z = z;
+            Values = values;
+            Message = message;
+            if (values == null)
+                Values = new List<OreOccurence>();
+            else
+                foreach (var val in values)
+                    _foundOres.Add(val.Name);
+        }
 
         public ProspectInfo(int x, int z, string message)
         {
             X = x;
             Z = z;
-            Message = message;
+            Values = new List<OreOccurence>();
+            try
+            {
+                ParseMessage(message);
+            }
+            catch (System.Exception)
+            {
+                Values.Clear();
+                // TODO instead of just saving the message we could check every language to parse this message.
+                // Sadly, applying the cleanup regex makes this message unparsable in the future.
+                Message = _cleanupRegex.Replace(message, string.Empty);
+            }
         }
 
         public bool Equals(ProspectInfo other)
@@ -30,6 +116,113 @@
                 return (X * 397) ^ Z;
             }
         }
-    }
 
+        /// <summary>
+        /// Tries to parse the given <paramref name="message"/> in the current locale. If the locale of <paramref name="message"/> is not equal to the current locale,
+        /// the message is just saved as is without parsing.
+        /// If any of the exceptions below is thrown, <see cref="Values"/> should be cleared and <paramref name="message"/> should be saved to <see cref="Message"/>.
+        /// </summary>
+        /// <param name="message">The prospecting string received from the server</param>
+        /// <exception cref="KeyNotFoundException">If a parsed ore name can not be found in oreNames or the density in translatedDensities</exception>
+        /// <exception cref="System.ArgumentNullException"></exception>
+        /// <exception cref="System.FormatException"></exception>
+        private void ParseMessage(string message)
+        {
+            string[] splits = message.Split('\n');
+
+            // If header can not be matched, we are receiving a different locale than our current one is.
+            if (!_headerParsingRegex.IsMatch(splits[0]))
+            {
+                // TODO instead of just saving the message we could check every language to parse this message.
+                // Sadly, applying the cleanup regex makes this message unparsable in the future.
+                Message = _cleanupRegex.Replace(message, string.Empty);
+                return;
+            }
+
+            for (int i = 1; i < splits.Length - 1; i++)
+            {
+                Match match = _readingParsingRegex.Match(splits[i]);
+                if (match.Success)
+                {
+                    Values.Add(new OreOccurence(
+                        _allOres[match.Groups["oreName"].Value],
+                        match.Groups["pageCode"].Value,
+                        _translatedDensities[match.Groups["relativeDensity"].Value],
+                        double.Parse(match.Groups["absoluteDensity"].Value)
+                    ));
+                } else
+                {
+                    MatchCollection matches = _tracesParsingRegex.Matches(splits[i]);
+                    foreach (Match elem in matches)
+                        Values.Add(new OreOccurence(
+                            _allOres[elem.Groups["oreName"].Value],
+                            elem.Groups["pageCode"].Value,
+                            RelativeDensity.Miniscule,
+                            0
+                        ));
+                }
+            }
+
+            foreach (var val in Values)
+                _foundOres.Add(val.Name);
+        }
+
+        public string GetMessage()
+        {
+            if (_messageCache != null)
+                return _messageCache;
+
+            StringBuilder sb = new StringBuilder();
+
+            if (Values.Count > 0)
+            {
+                sb.AppendLine(Lang.Get("propick-reading-title", Values.Count));
+
+                var sbTrace = new StringBuilder();
+                int traceCount = 0;
+
+                foreach (var elem in Values)
+                {
+                    if (elem.RelativeDensity > RelativeDensity.Miniscule)
+                    {
+                        string proPickReading = Lang.Get("propick-reading", Lang.Get(_densityStrings[(int)elem.RelativeDensity - 2]), elem.PageCode, Lang.Get(elem.Name), elem.AbsoluteDensity.ToString("0.#"));
+                        proPickReading = _cleanupRegex.Replace(proPickReading, string.Empty);
+                        sb.AppendLine(proPickReading);
+                    }
+                    else
+                    {
+                        if (traceCount > 0)
+                            sbTrace.Append(", ");
+                        sbTrace.Append(Lang.Get(elem.Name));
+                        traceCount++;
+                    }
+                }
+                if (sbTrace.Length != 0)
+                {
+                    sb.Append(Lang.Get("Miniscule amounts of {0}", sbTrace.ToString()));
+                    sb.AppendLine();
+                }
+            }
+            else
+            {
+                if (Message != null)
+                    sb.Append(Message);
+                else
+                    sb.Append(Lang.Get("propick-noreading"));
+            }
+
+            _messageCache = sb.ToString();
+            return _messageCache;
+        }
+
+        public RelativeDensity GetValueOfOre(string oreName)
+        {
+            foreach (var ore in Values)
+            {
+                if (Lang.Get(ore.Name).ToLower() == oreName.ToLower() || ore.Name.ToLower() == oreName.ToLower())
+                    return ore.RelativeDensity;
+            }
+            return RelativeDensity.Zero;
+        }
+    }
 }
