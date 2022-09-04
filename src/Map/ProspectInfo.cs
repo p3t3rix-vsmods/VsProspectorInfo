@@ -210,13 +210,13 @@ namespace ProspectorInfo.Map
                 { Lang.GetL(langCode, "propick-density-ultrahigh"), RelativeDensity.UltraHigh }
             };
 
-            for (int i = 1; i < splits.Length; i++)
+            foreach (var reading in splits)
             {
                 RelativeDensity relativeDensity = RelativeDensity.Zero;
 
                 foreach (var density in _relativeDensities)
                 {
-                    if (splits[i].Contains(density.Key))
+                    if (reading.Contains(density.Key))
                     {
                         relativeDensity = density.Value;
                         break;
@@ -226,11 +226,11 @@ namespace ProspectorInfo.Map
                 if (relativeDensity != RelativeDensity.Zero) 
                 {
                     Regex absoluteDensityRegex = new Regex("([0-9]+,?[0-9]*)");
-                    double absoluteDensity = double.Parse(absoluteDensityRegex.Match(splits[i]).Value);
+                    double absoluteDensity = double.Parse(absoluteDensityRegex.Match(reading).Value);
 
                     string oreName = null;
                     foreach (var ore in ores)
-                        if (splits[i].Contains(ore.Key))
+                        if (reading.Contains(ore.Key))
                         {
                             oreName = ore.Value;
                             break;
@@ -241,7 +241,7 @@ namespace ProspectorInfo.Map
                 else // if it is RelativeDensity.Zero we are checking miniscule amounts
                 {
                     foreach (var ore in ores)
-                        if (splits[i].Contains(ore.Key))
+                        if (reading.Contains(ore.Key))
                             Values.Add(new OreOccurence(ore.Value, null, RelativeDensity.Miniscule, 0));
                 }
             }
