@@ -129,20 +129,17 @@ namespace ProspectorInfo.Map
         /// <exception cref="System.FormatException"></exception>
         private void ParseMessage(string message)
         {
-            string[] splits = message.Split('\n');
-
             // If header can not be matched, we are receiving a different locale than our current one is.
-            if (!_headerParsingRegex.IsMatch(splits[0]))
-            {
-                // TODO instead of just saving the message we could check every language to parse this message.
-                // Sadly, applying the cleanup regex makes this message unparsable in the future.
-                Message = _cleanupRegex.Replace(message, string.Empty);
-                return;
-            }
+            var headerMatch = _headerParsingRegex.Match(message);
+            if (!headerMatch.Success)
+                throw new System.FormatException();
 
-            for (int i = 1; i < splits.Length - 1; i++)
+            // We have to remove the header before splitting as some languages (looking at you Slovensky) have a line break in their header
+            string[] splits = message.Replace(headerMatch.Value, string.Empty).Split('\n');
+
+            foreach (var reading in splits)
             {
-                Match match = _readingParsingRegex.Match(splits[i]);
+                Match match = _readingParsingRegex.Match(reading);
                 if (match.Success)
                 {
                     Values.Add(new OreOccurence(
@@ -153,7 +150,7 @@ namespace ProspectorInfo.Map
                     ));
                 } else
                 {
-                    MatchCollection matches = _tracesParsingRegex.Matches(splits[i]);
+                    MatchCollection matches = _tracesParsingRegex.Matches(reading);
                     foreach (Match elem in matches)
                         Values.Add(new OreOccurence(
                             _allOres[elem.Groups["oreName"].Value],
