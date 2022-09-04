@@ -128,16 +128,13 @@ namespace ProspectorInfo.Map
         /// <exception cref="System.FormatException"></exception>
         private void ParseMessage(string message)
         {
-            string[] splits = message.Split('\n');
-
             // If header can not be matched, we are receiving a different locale than our current one is.
-            if (!_headerParsingRegex.IsMatch(splits[0]))
-            {
-                // TODO instead of just saving the message we could check every language to parse this message.
-                // Sadly, applying the cleanup regex makes this message unparsable in the future.
-                Message = _cleanupRegex.Replace(message, string.Empty);
-                return;
-            }
+            var headerMatch = _headerParsingRegex.Match(message);
+            if (!headerMatch.Success)
+                throw new System.FormatException();
+
+            // We have to remove the header before splitting as some languages (looking at you Slovensky) have a line break in their header
+            string[] splits = message.Replace(headerMatch.Value, string.Empty).Split('\n');
 
             for (int i = 1; i < splits.Length - 1; i++)
             {
