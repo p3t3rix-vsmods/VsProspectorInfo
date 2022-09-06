@@ -246,6 +246,9 @@ namespace ProspectorInfo.Map
                 }
             }
 
+            foreach (var val in Values)
+                _foundOres.Add(val.Name);
+
             Message = null;
         }
 
