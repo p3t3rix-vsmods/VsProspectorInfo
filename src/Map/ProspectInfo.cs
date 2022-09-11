@@ -257,7 +257,7 @@ namespace ProspectorInfo.Map
 
             StringBuilder sb = new StringBuilder();
 
-            if (Values.Count > 0)
+            if (Values != null && Values.Count > 0)
             {
                 sb.AppendLine(Lang.Get("propick-reading-title", Values.Count));
 
