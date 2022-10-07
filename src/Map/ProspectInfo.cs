@@ -300,11 +300,12 @@ namespace ProspectorInfo.Map
 
         public RelativeDensity GetValueOfOre(string oreName)
         {
-            foreach (var ore in Values)
-            {
-                if (Lang.Get(ore.Name).ToLower() == oreName.ToLower() || ore.Name.ToLower() == oreName.ToLower())
-                    return ore.RelativeDensity;
-            }
+            if (Values != null)
+                foreach (var ore in Values)
+                {
+                    if (Lang.Get(ore.Name).ToLower() == oreName.ToLower() || ore.Name.ToLower() == oreName.ToLower())
+                        return ore.RelativeDensity;
+                }
             return RelativeDensity.Zero;
         }
     }
