@@ -20,5 +20,14 @@ namespace ProspectorInfo.Models
 
         [JsonIgnore]
         public int RGBA { get => ColorUtil.ToRgba(this.Alpha, this.Blue, this.Green, this.Red); }
+
+        public ColorWithAlpha CopyWith(ColorWithAlpha other)
+        {
+            return new ColorWithAlpha(
+                other.Red == -1 ? Red : other.Red,
+                other.Green == -1 ? Green : other.Green,
+                other.Blue == -1 ? Blue : other.Blue,
+                other.Alpha == -1 ? Alpha : other.Alpha);
+        }
     }
 }
