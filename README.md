@@ -6,21 +6,31 @@ Just drop the file into your mods folder. You just need this mod on the client, 
 
 ## Commands
 
-    .pi - main command for the mod and the default sub-command is to 'showoverlay', which will toggle the rendering of the texture on the map
-    .pi showoverlay [true,false] - Sending no arguments will simply toggle the value of the RenderTexturesOnMap config option. Sending either true or false, will set the config option to the appropriate value
-    .pi setcolor [0-255] [0-255] [0-255] [0-255] - Set's the value of the TextureColor field in the config & rebuilds the texture.
-    .pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Set's the value of the BorderColor field in the config & rebuilds the texture.
-    .pi setborderthickness [number] - Set the BorderThickness value in the config & rebuilds the texture.
-    .pi toggleborder [true,false] - Set's the `RenderBorder` value in the config & rebuilds the texture.
-    .pi showgui - Shows the GUI where you can configure the mode (default or heatmap) and select the ore that should be heatmapped
+    .pi - main command for the mod and the default sub-command is to 'showoverlay'
+    .pi showoverlay [true,false] - Show or hide the overlay on the map. Toggles without argument.
+    .pi showborder [true,false] - Show or hide the border around chunks. Toggles without argument.
+    .pi showgui [true,false] - Show the GUI where you can configure the mode (default or heatmap) and select the ore that should be heatmapped.
+    .pi setcolor (overlay|border|lowheat|highheat) [0-255] [0-255] [0-255] [0-255] - Sets the color of the respective element.
+    .pi setborderthickness [1-5] - Sets the border thickness. 
+    .pi mode [0-1] - Sets the map mode. Supported modes: 0 (Default) and 1 (Heatmap)
+    .pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore.
+        No argument resets the heatmap back to all ores. Can only handle the ore name in your selected language or the ore tag.
+        Examples: game:ore-emerald, game:ore-bituminouscoal, Cassiterite.
+
+Each command updates the respective configuration option.
 
 ## Configuration
 
-    TextureColor [0-255] [0-255] [0-255] [0-255] - The default color to use for the texture. Default: 7 52 91 50
-    BorderColor [0-255] [0-255] [0-255] [0-255] - The default color to use for the border texture. Default: 0 0 0 200
-    BorderThickness [number] - The thickness, in pixels, of the border color. Default: 1
+    TextureColor [0-255] [0-255] [0-255] [0-255] - The default color to use for the overlay. Default: 150 125 150 128
+    BorderColor [0-255] [0-255] [0-255] [0-255] - The default color to use for the border. Default: 0 0 0 200
+    LowHeatColor [0-255] [0-255] [0-255] [0-255] - Heatmap color for low relative densitry. Default: 85 85 181 128
+    HighHeatColor [0-255] [0-255] [0-255] [0-255] - Heatmap color for low relative densitry. Default: 168 34 36 128
+    BorderThickness [1-5] - The thickness, in pixels, of the border color. Default: 1
     RenderBorder [true,false] - Whether or not to render the border at all. Default: true
-    AutoToggle [true,false] - Whether or not to toggle the texture on map automatically, based on the player equipping/unequipping a prospecting pick. Default: true
+    AutoToggle [true,false] - Whether or not to toggle the overlay on the map automatically, 
+                              based on the player equipping/unequipping a prospecting pick. Default: true
+    HeatMapOre [oreName] - The ore selected for the heatmap.
+    MapMode [0-1] - The mode of the map.
 
 ## Usage
 

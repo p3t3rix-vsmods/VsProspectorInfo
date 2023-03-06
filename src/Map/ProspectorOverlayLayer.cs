@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Foundation.Extensions;
 using HarmonyLib;
 using ProspectorInfo.Models;
+using ProspectorInfo.Utils;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
@@ -66,7 +66,58 @@ namespace ProspectorInfo.Map
                     }
                 };
 
-                _clientApi.RegisterCommand("pi", "ProspectorInfo main command. Allows you to toggle the visibility of the chunk texture overlay.", "", OnPiCommand);
+                _clientApi.ChatCommands.Create("pi")
+                    .WithDescription("ProspectorInfo main command. Defaults to toggling the map overlay.")
+                    .HandleWith(OnShowOverlayCommand)
+                    .BeginSubCommand("showoverlay")
+                        .WithDescription(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.")
+                        .WithArgs(api.ChatCommands.Parsers.OptionalBool("show"))
+                        .HandleWith(OnShowOverlayCommand)
+                    .EndSubCommand()
+                    .BeginSubCommand("showgui")
+                        .WithDescription(".pi showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.")
+                        .WithArgs(api.ChatCommands.Parsers.OptionalBool("show"))
+                        .HandleWith(OnShowGuiCommand)
+                    .EndSubCommand()
+                    .BeginSubCommand("showborder")
+                        .WithDescription(".pi showborder [bool] - Shows or hides the tile border. No argument toggles instead.<br/>" +
+                                         "Sets the \"RenderBorder\" config option (default = true)")
+                        .WithArgs(api.ChatCommands.Parsers.OptionalBool("show"))
+                        .HandleWith(OnShowBorderCommand)
+                    .EndSubCommand()
+                    .BeginSubCommand("setcolor")
+                        .WithDescription(".pi setcolor (overlay|border|lowheat|highheat) [0-255] [0-255] [0-255] [0-255]<br/>" +
+                                         "Sets the given color for the specified element.<br/>" +
+                                         "You can specify a color either as RGBA, RGB or only A.<br/>" +
+                                         "The lowheat and highheat colors will be blended on the heatmap based on relative density.<br/>" +
+                                         "Available elements and corresponding config option:<br/>" +
+                                         "overlay: TextureColor (default = 150 125 150 128)<br/>" +
+                                         "border: BorderColor (default = 0 0 0 200)<br/>" +
+                                         "lowheat: LowHeatColor (default = 85 85 181 128)<br/>" +
+                                         "highheat: HighHeatColor (default = 168 34 36 128)")
+                        .WithArgs(api.ChatCommands.Parsers.WordRange("element", "overlay", "border", "lowheat", "highheat"),
+                                  new ColorWithAlphaArgParser("color", true))
+                        .HandleWith(OnSetColorCommand)
+                    .EndSubCommand()
+                    .BeginSubCommand("setborderthickness")
+                        .WithDescription(".pi setborderthickness [1-5] - Sets the tile outline's thickness.<br/>" +
+                                         "Sets the \"BorderThickness\" config option (default = 1)")
+                        .WithArgs(api.ChatCommands.Parsers.IntRange("thickness",1,5))
+                        .HandleWith(OnSetBorderThicknessCommand)
+                    .EndSubCommand()
+                    .BeginSubCommand("mode")
+                        .WithDescription(".pi mode [0-1] - Sets the map mode<br/>" +
+                                         "Supported modes: 0 (Default) and 1 (Heatmap)")
+                        .WithArgs(api.ChatCommands.Parsers.IntRange("mode", 0, 1))
+                        .HandleWith(OnSetModeCommand)
+                    .EndSubCommand()
+                    .BeginSubCommand("heatmapore")
+                        .WithDescription(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore<br/>" +
+                                         "No argument resets the heatmap back to all ores. Can only handle the ore name in your selected language or the ore tag.<br/>" +
+                                         "E.g. game:ore-emerald, game:ore-bituminouscoal, Cassiterite")
+                        .WithArgs(api.ChatCommands.Parsers.OptionalWord("oreName"))
+                        .HandleWith(OnHeatmapOreCommand)
+                    .EndSubCommand();
 
                 for (int i = 0; i < _colorTextures.Length; i++)
                 {
@@ -81,197 +132,95 @@ namespace ProspectorInfo.Map
 
         #region Commands/Events
 
-
-        private void OnPiCommand(int groupId, CmdArgs args)
+        private TextCommandResult OnShowOverlayCommand(TextCommandCallingArgs args) 
         {
-            switch (args.PopWord("showoverlay"))
+            // Parser count is 0 when only calling .pi command.
+            if (args.Parsers.Count == 0 || args.Parsers[0].IsMissing)
+                _config.RenderTexturesOnMap = !_config.RenderTexturesOnMap;
+            else
+                _config.RenderTexturesOnMap = (bool) args.Parsers[0].GetValue();
+            _config.Save(api);
+            return TextCommandResult.Success();
+        }
+
+        private TextCommandResult OnShowGuiCommand(TextCommandCallingArgs args)
+        {
+            if (args.Parsers[0].IsMissing)
+                _config.ShowGui = !_config.ShowGui;
+            else
+                _config.ShowGui = (bool) args.Parsers[0].GetValue();
+            _config.Save(api);
+            if (_worldMapManager.IsOpened)
+                _settingsDialog.TryOpen();
+            return TextCommandResult.Success();
+        }
+
+        private TextCommandResult OnSetColorCommand(TextCommandCallingArgs args)
+        {
+            ColorWithAlpha colorUpdate = (ColorWithAlpha) args.Parsers[1].GetValue();
+            switch ((string)args.Parsers[0].GetValue()) 
             {
-                case "showoverlay":
-                    var toggleValue = args.PopBool();
-                    if (toggleValue.HasValue)
-                        _config.RenderTexturesOnMap = toggleValue.Value;
-                    else
-                        _config.RenderTexturesOnMap = !_config.RenderTexturesOnMap;
-
-                    _config.Save(api);
+                case "overlay":
+                    _config.TextureColor = _config.TextureColor.CopyWith(colorUpdate);
                     break;
-                case "showgui":
-                    var guiToggleValue = args.PopBool();
-                    if (guiToggleValue.HasValue)
-                        _config.ShowGui = guiToggleValue.Value;
-                    else
-                        _config.ShowGui = !_config.ShowGui;
-
-                    _config.Save(api);
-                    if (_worldMapManager.IsOpened)
-                        _settingsDialog.TryOpen();
+                case "border":
+                    _config.BorderColor = _config.BorderColor.CopyWith(colorUpdate);
                     break;
-                case "setcolor":
-                    try
-                    {
-                        var newColor = TrySetRGBAValues(args, _config.TextureColor);
-                        _config.TextureColor = newColor;
-                        _config.Save(api);
-
-                        RebuildMap(true);
-                    }
-                    catch (FormatException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    catch (ArgumentException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
+                case "lowheat":
+                    _config.LowHeatColor = _config.LowHeatColor.CopyWith(colorUpdate);
                     break;
-                case "setlowheatcolor":
-                    try
-                    {
-                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
-                        _config.LowHeatColor = newColor;
-                        _config.Save(api);
-
-                        RebuildMap(true);
-                    }
-                    catch (FormatException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    catch (ArgumentException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    break;
-                case "sethighheatcolor":
-                    try
-                    {
-                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
-                        _config.HighHeatColor = newColor;
-                        _config.Save(api);
-
-                        RebuildMap(true);
-                    }
-                    catch (FormatException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    catch (ArgumentException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    break;
-                case "setbordercolor":
-                    try
-                    {
-                        var newColor = TrySetRGBAValues(args, _config.BorderColor);
-                        _config.BorderColor = newColor;
-                        _config.Save(api);
-
-                        RebuildMap(true);
-                    }
-                    catch (FormatException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    catch (ArgumentException e)
-                    {
-                        _clientApi.ShowChatMessage(e.Message);
-                    }
-                    break;
-                case "setborderthickness":
-                    var newThickness = args.PopInt(2).Value;
-                    _config.BorderThickness = newThickness;
-                    _config.Save(api);
-
-                    RebuildMap(true);
-                    break;
-                case "toggleborder":
-                    var toggleBorder = args.PopBool() ?? !_config.RenderBorder;
-                    _config.RenderBorder = toggleBorder;
-                    _config.Save(api);
-
-                    RebuildMap(true);
-                    break;
-                case "mode":
-                    var newMode = args.PopInt(2).Value;
-                    _config.MapMode = (MapMode)newMode;
-                    _config.Save(api);
-
-                    RebuildMap(true);
-                    break;
-                case "heatmapore":
-                    var oreName = args.PopAll();
-                    if (oreName.Trim() == "" || oreName.Trim() == "null")
-                        oreName = null;
-                    _config.HeatMapOre = oreName;
-                    _config.Save(api);
-
-                    RebuildMap(true);
-                    break;
-                case "help":
-                    switch (args.PopWord(""))
-                    {
-                        case "showoverlay":
-                            _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
-                            break;
-                        case "showgui":
-                            _clientApi.ShowChatMessage(".pi showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.");
-                            break;
-                        case "setcolor":
-                            _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the overlay tiles.");
-                            _clientApi.ShowChatMessage("Command version of config \"TextureColor\". Default config: 7 52 91 50");
-                            break;
-                        case "setlowheatcolor":
-                            _clientApi.ShowChatMessage(".pi setlowheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the low heat RGBA color of the overlay tiles for the heatmap.");
-                            _clientApi.ShowChatMessage("Gets blended with \"sethighheatcolor\" based on the relative density of a ore");
-                            _clientApi.ShowChatMessage("Command version of config \"setlowheatcolor\". Default config: 85 85 181 128");
-                            break;
-                        case "sethighheatcolor":
-                            _clientApi.ShowChatMessage(".pi sethighheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the high heat RGBA color of the overlay tiles for the heatmap.");
-                            _clientApi.ShowChatMessage("Gets blended with \"setlowheatcolor\" based on the relative density of a ore");
-                            _clientApi.ShowChatMessage("Command version of config \"sethighheatcolor\". Default config: 168 34 36 128");
-                            break;
-                        case "setbordercolor":
-                            _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the color of the tile outlines.");
-                            _clientApi.ShowChatMessage("Command version of config \"BorderColor\". Default config: 0 0 0 200");
-                            break;
-                        case "setborderthickness":
-                            _clientApi.ShowChatMessage(".pi setborderthickness [int] - Sets the tile outline's thickness.");
-                            _clientApi.ShowChatMessage("Command version of config \"BorderThickness\". Default config: 1");
-                            break;
-                        case "toggleborder":
-                            _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
-                            _clientApi.ShowChatMessage("Command version of config \"RenderBorder\". Default config: true");
-                            break;
-                        case "mode":
-                            _clientApi.ShowChatMessage(".pi mode [0-1] - Sets the map mode");
-                            _clientApi.ShowChatMessage("Supported modes: 0 (Default) and 1 (Heatmap)");
-                            break;
-                        case "heatmapore":
-                            _clientApi.ShowChatMessage(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore");
-                            _clientApi.ShowChatMessage("No argument resets the heatmap back to all ores. Can only handle the ore name in your selected language or the ore tag.");
-                            _clientApi.ShowChatMessage("E.g. game:ore-emerald, game:ore-bituminouscoal, Cassiterite");
-                            break;
-                        default:
-                            _clientApi.ShowChatMessage(".pi - Defaults to \"showoverlay\" without arguments.");
-                            _clientApi.ShowChatMessage(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.");
-                            _clientApi.ShowChatMessage(".pi showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.");
-                            _clientApi.ShowChatMessage(".pi setcolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the overlay tiles.");
-                            _clientApi.ShowChatMessage(".pi setlowheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the low heat RGBA color of the overlay tiles for the heatmap.");
-                            _clientApi.ShowChatMessage(".pi sethighheatcolor [0-255] [0-255] [0-255] [0-255] - Sets the high heat RGBA color of the overlay tiles for the heatmap.");
-                            _clientApi.ShowChatMessage(".pi setbordercolor [0-255] [0-255] [0-255] [0-255] - Sets the RGBA color of the tile outlines.");
-                            _clientApi.ShowChatMessage(".pi setborderthickness [int] - Sets the tile outline's thickness.");
-                            _clientApi.ShowChatMessage(".pi toggleborder [true,false] - Shows or hides the tile border.");
-                            _clientApi.ShowChatMessage(".pi mode [0-1] - Sets the map mode");
-                            _clientApi.ShowChatMessage(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore");
-                            _clientApi.ShowChatMessage(".pi help [command] - Shows command's help. Defaults to listing .pi subcommands.");
-                            break;
-                    }
+                case "highheat":
+                    _config.HighHeatColor = _config.HighHeatColor.CopyWith(colorUpdate);
                     break;
                 default:
-                    _clientApi.ShowChatMessage("Unknown subcommand! Try \"help\".");
-                    break;
+                    return TextCommandResult.Error("Unknown element to set color for");
             }
+            _config.Save(api);
+            RebuildMap(true);
+            return TextCommandResult.Success();
+        }
+
+        private TextCommandResult OnSetBorderThicknessCommand(TextCommandCallingArgs args)
+        {
+            var newThickness = (int) args.Parsers[0].GetValue();
+            _config.BorderThickness = newThickness;
+            _config.Save(api);
+            RebuildMap(true);
+            return TextCommandResult.Success();
+        }
+
+        private TextCommandResult OnShowBorderCommand(TextCommandCallingArgs args)
+        {
+            if (args.Parsers[0].IsMissing)
+                _config.RenderBorder = !_config.RenderBorder;
+            else
+                _config.RenderBorder = (bool) args.Parsers[0].GetValue();
+            _config.Save(api);
+
+            RebuildMap(true);
+            return TextCommandResult.Success();
+        }
+
+        private TextCommandResult OnSetModeCommand(TextCommandCallingArgs args)
+        {
+            var newMode = (int) args.Parsers[0].GetValue();
+            _config.MapMode = (MapMode)newMode;
+            _config.Save(api);
+
+            RebuildMap(true);
+            return TextCommandResult.Success();
+        }
+
+        private TextCommandResult OnHeatmapOreCommand(TextCommandCallingArgs args)
+        {
+            if (args.Parsers[0].IsMissing)
+                _config.HeatMapOre = null;
+            else
+                _config.HeatMapOre = (string) args.Parsers[0].GetValue();
+            _config.Save(api);
+
+            RebuildMap(true);
+            return TextCommandResult.Success();
         }
 
         private void Event_SlotModified(int slotId)
@@ -294,68 +243,6 @@ namespace ProspectorInfo.Map
         private bool ProspectingPickInHand => _clientApi?.World?.Player?.InventoryManager?.ActiveHotbarSlot?.Itemstack?.Item?.Code?
                 .FirstPathPart()?.ToLower().StartsWith("prospectingpick") ?? false;
 
-        #endregion
-
-        #region SetColorCommand
-        private ColorWithAlpha TrySetRGBAValues(CmdArgs args, ColorWithAlpha color)
-        {
-            var numberOfArgs = args.Length;
-            if (numberOfArgs == 4)
-                SetColorAndAlpha(args, color);
-            else if (numberOfArgs == 3)
-                SetColor(args, color);
-            else if (numberOfArgs == 1)
-                SetAlpha(args, color, 0);
-            else
-                throw new FormatException($"Number of arguments must be 4, 3, or 1. You provided {numberOfArgs}!");
-
-            return color;
-        }
-
-        private void SetColorAndAlpha(CmdArgs args, ColorWithAlpha color)
-        {
-            SetColor(args, color);
-            SetAlpha(args, color, 3);
-        }
-
-        private void SetColor(CmdArgs args, ColorWithAlpha color)
-        {
-            color.Red = TryGetArgumentValue(args, 0);
-            color.Green = TryGetArgumentValue(args, 1);
-            color.Blue = TryGetArgumentValue(args, 2);
-        }
-
-        private void SetAlpha(CmdArgs args, ColorWithAlpha color, int position)
-        {
-            color.Alpha = TryGetArgumentValue(args, position);
-        }
-
-        private int TryGetArgumentValue(CmdArgs args, int position)
-        {
-            var arg = args.PopInt() ?? throw new FormatException($"{GetArgumentPositionAsString(position)} argument must be an integer!");
-            if (arg > 255)
-                throw new ArgumentException($"{GetArgumentPositionAsString(position)} argument must be 255 or less!");
-            if (arg < 0)
-                throw new ArgumentException($"{GetArgumentPositionAsString(position)} argument must be 0 or greater!");
-            return arg;
-        }
-
-        private string GetArgumentPositionAsString(int position)
-        {
-            switch (position)
-            {
-                case 0:
-                    return "First";
-                case 1:
-                    return "Second";
-                case 2:
-                    return "Third";
-                case 3:
-                    return "Fourth";
-                default:
-                    return "";
-            }
-        }
         #endregion
 
         #region Texture
