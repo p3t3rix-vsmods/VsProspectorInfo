@@ -157,20 +157,20 @@ namespace ProspectorInfo.Map
 
         private TextCommandResult OnSetColorCommand(TextCommandCallingArgs args)
         {
-            ColorWithAlpha colorUpdate = (ColorWithAlpha) args.Parsers[1].GetValue();
+            ColorWithAlphaUpdate colorUpdate = (ColorWithAlphaUpdate) args.Parsers[1].GetValue();
             switch ((string)args.Parsers[0].GetValue()) 
             {
                 case "overlay":
-                    _config.TextureColor = _config.TextureColor.CopyWith(colorUpdate);
+                    colorUpdate.ApplyUpdateTo(_config.TextureColor);
                     break;
                 case "border":
-                    _config.BorderColor = _config.BorderColor.CopyWith(colorUpdate);
+                    colorUpdate.ApplyUpdateTo(_config.BorderColor);
                     break;
                 case "lowheat":
-                    _config.LowHeatColor = _config.LowHeatColor.CopyWith(colorUpdate);
+                    colorUpdate.ApplyUpdateTo(_config.LowHeatColor);
                     break;
                 case "highheat":
-                    _config.HighHeatColor = _config.HighHeatColor.CopyWith(colorUpdate);
+                    colorUpdate.ApplyUpdateTo(_config.HighHeatColor);
                     break;
                 default:
                     return TextCommandResult.Error("Unknown element to set color for");

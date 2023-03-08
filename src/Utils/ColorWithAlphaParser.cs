@@ -8,9 +8,34 @@ using Vintagestory.API.Common;
 
 namespace ProspectorInfo.Utils
 {
+    public class ColorWithAlphaUpdate 
+    {
+
+        private byte? red; 
+        private byte? green; 
+        private byte? blue; 
+        private byte? alpha;
+
+        public ColorWithAlphaUpdate(byte? r, byte? g, byte? b, byte? a)
+        {
+            red = r;
+            green = g;
+            blue = b;
+            alpha = a;
+        }
+
+        public void ApplyUpdateTo(ColorWithAlpha other) 
+        {
+            other.Red = red.HasValue ? red.Value : other.Red;
+            other.Green = green.HasValue ? green.Value : other.Green;
+            other.Blue = blue.HasValue ? blue.Value : other.Blue;
+            other.Alpha = alpha.HasValue ? alpha.Value : other.Alpha;
+        }
+    }
+    
     public class ColorWithAlphaArgParser : ArgumentParserBase
     {
-        private ColorWithAlpha value = new ColorWithAlpha(-1, -1, -1, -1);
+        private ColorWithAlphaUpdate value = new ColorWithAlphaUpdate(null, null, null, null);
 
         public ColorWithAlphaArgParser(string argName, bool isMandatoryArg) : base(argName, isMandatoryArg)
         {
@@ -23,7 +48,7 @@ namespace ProspectorInfo.Utils
 
         public override void SetValue(object data)
         {
-            value = (ColorWithAlpha) data;
+            value = (ColorWithAlphaUpdate) data;
         }
 
         public override EnumParseResult TryProcess(TextCommandCallingArgs args, Action<AsyncParseResults> onReady = null)
@@ -39,7 +64,7 @@ namespace ProspectorInfo.Utils
                 return EnumParseResult.Bad;
             }
 
-            int[] values = new int[argCount];
+            byte[] values = new byte[argCount];
             for (int i = 0; i < values.Length; i++)
             {
                 var arg = args.RawArgs.PopInt();
@@ -53,15 +78,15 @@ namespace ProspectorInfo.Utils
                     lastErrorMessage = $"Color component {i+1} must be in range [0-255].";
                     return EnumParseResult.Bad;
                 }
-                values[i] = arg.Value;
+                values[i] = (byte) arg.Value;
             }
 
             if (values.Length == 1)
-                value = new ColorWithAlpha(-1, -1, -1, values[0]);
+                value = new ColorWithAlphaUpdate(null, null, null, values[0]);
             else if (values.Length == 3)
-                value = new ColorWithAlpha(values[0], values[1], values[2], -1);
+                value = new ColorWithAlphaUpdate(values[0], values[1], values[2], null);
             else
-                value = new ColorWithAlpha(values[0], values[1], values[2], values[3]);
+                value = new ColorWithAlphaUpdate(values[0], values[1], values[2], values[3]);
             return EnumParseResult.Good;
         }
     }
