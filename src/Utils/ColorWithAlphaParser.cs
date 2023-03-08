@@ -26,10 +26,10 @@ namespace ProspectorInfo.Utils
 
         public void ApplyUpdateTo(ColorWithAlpha other) 
         {
-            other.Red = red.HasValue ? red.Value : other.Red;
-            other.Green = green.HasValue ? green.Value : other.Green;
-            other.Blue = blue.HasValue ? blue.Value : other.Blue;
-            other.Alpha = alpha.HasValue ? alpha.Value : other.Alpha;
+            other.Red = red ?? other.Red;
+            other.Green = green ?? other.Green;
+            other.Blue = blue ?? other.Blue;
+            other.Alpha = alpha ?? other.Alpha;
         }
     }
     
