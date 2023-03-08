@@ -48,6 +48,12 @@ namespace ProspectorInfo.Map
             RegexOptions.Compiled
         );
 
+        /// <summary>
+        /// A regex to extract decimal numbers from a string.
+        /// </summary>
+        private static readonly Regex _absoluteDensityRegex = new Regex("([0-9]+[.,]?[0-9]*)", 
+            RegexOptions.Compiled);
+
         public readonly int X;
         public readonly int Z;
 
@@ -223,9 +229,8 @@ namespace ProspectorInfo.Map
 
                 if (relativeDensity != RelativeDensity.Zero) 
                 {
-                    Regex absoluteDensityRegex = new Regex("([0-9]+,?[0-9]*)");
-                    double absoluteDensity = double.Parse(absoluteDensityRegex.Match(reading).Value);
-
+                    double absoluteDensity = double.Parse(_absoluteDensityRegex.Match(reading).Value);
+                    
                     string oreName = null;
                     foreach (var ore in ores)
                         if (reading.Contains(ore.Key))
