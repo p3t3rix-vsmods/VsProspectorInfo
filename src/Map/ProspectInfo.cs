@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -129,6 +130,19 @@ namespace ProspectorInfo.Map
         }
 
         /// <summary>
+        /// The absolute density values that we get from the server are formatted with the servers system/OS locale (not game locale).
+        /// Thus, we might get either ',' or '.' as a decimal separator.
+        /// Since we cannot know the locale in advance, we replace all `,` with `.` and parse the number
+        /// using the invariant culture, i.e., one that uses `.` as a hardcoded decimal separator.
+        /// This can get problematic if we encounter numbers with digit grouping, e.g., `1,000.00`,
+        /// but hopefully, this will never be case.
+        /// </summary>
+        private static double ParseDoubleInvariant(string value)
+        {
+            return double.Parse(value.Replace(",", "."), CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
         /// Tries to parse the given <paramref name="message"/> in the current locale. If the locale of <paramref name="message"/> is not equal to the current locale,
         /// the message is just saved as is without parsing.
         /// If any of the exceptions below is thrown, <see cref="Values"/> should be cleared and <paramref name="message"/> should be saved to <see cref="Message"/>.
@@ -156,7 +170,7 @@ namespace ProspectorInfo.Map
                         _allOres[match.Groups["oreName"].Value],
                         match.Groups["pageCode"].Value,
                         _translatedDensities[match.Groups["relativeDensity"].Value],
-                        double.Parse(match.Groups["absoluteDensity"].Value)
+                        ParseDoubleInvariant(match.Groups["absoluteDensity"].Value)
                     ));
                 } else
                 {
@@ -229,7 +243,7 @@ namespace ProspectorInfo.Map
 
                 if (relativeDensity != RelativeDensity.Zero) 
                 {
-                    double absoluteDensity = double.Parse(_absoluteDensityRegex.Match(reading).Value);
+                    double absoluteDensity = ParseDoubleInvariant(_absoluteDensityRegex.Match(reading).Value);
                     
                     string oreName = null;
                     foreach (var ore in ores)
