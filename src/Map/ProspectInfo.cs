@@ -13,22 +13,28 @@ namespace ProspectorInfo.Map
         
         private static readonly Dictionary<string, string> _allOres = new OreNames();
         private static readonly HashSet<string> _foundOres = new HashSet<string>();
-        private static readonly List<string> _densityStrings = new List<string>{ 
-            "propick-density-verypoor",
-            "propick-density-poor",
-            "propick-density-decent",
-            "propick-density-high",
-            "propick-density-veryhigh",
-            "propick-density-ultrahigh"
-        };
-        private static readonly Dictionary<string, RelativeDensity> _translatedDensities = new Dictionary<string, RelativeDensity>{
-            { Lang.Get("propick-density-verypoor"), RelativeDensity.VeryPoor },
-            { Lang.Get("propick-density-poor"), RelativeDensity.Poor },
-            { Lang.Get("propick-density-decent"), RelativeDensity.Decent },
-            { Lang.Get("propick-density-high"), RelativeDensity.High },
-            { Lang.Get("propick-density-veryhigh"), RelativeDensity.VeryHigh },
-            { Lang.Get("propick-density-ultrahigh"), RelativeDensity.UltraHigh }
-        };
+
+        /// <summary>
+        /// Maps relative densities to their Lang string.
+        /// Note that not every RelativeDensity has such a mapping.
+        /// </summary>
+        private static readonly Dictionary<RelativeDensity, string> _relativeDensityToLang = new Dictionary<RelativeDensity, string>{
+                { RelativeDensity.VeryPoor, "propick-density-verypoor" },
+                { RelativeDensity.Poor, "propick-density-poor"},
+                { RelativeDensity.Decent, "propick-density-decent" },
+                { RelativeDensity.High , "propick-density-high" },
+                { RelativeDensity.VeryHigh , "propick-density-veryhigh" },
+                { RelativeDensity.UltraHigh , "propick-density-ultrahigh" }
+            };
+
+        private static Dictionary<string, RelativeDensity> GetDensityMappingForLang(string langCode)
+        {
+            return _relativeDensityToLang.ToDictionary(entry => Lang.GetL(langCode, entry.Value), entry => entry.Key);
+        }
+        private static readonly Dictionary<string, RelativeDensity> _translatedDensities = GetDensityMappingForLang(Lang.CurrentLocale);
+
+        
+
         private static readonly Regex _cleanupRegex = new Regex("<.*?>", RegexOptions.Compiled);
         private static readonly Regex _headerParsingRegex = new Regex(Lang.Get("propick-reading-title", ".*?"), RegexOptions.Compiled);
         private static readonly Regex _readingParsingRegex = new Regex(
@@ -219,20 +225,13 @@ namespace ProspectorInfo.Map
             foreach (var ore in _allOres)
                 ores[Lang.GetL(langCode, ore.Value)] = ore.Value;
 
-            Dictionary<string, RelativeDensity> _relativeDensities = new Dictionary<string, RelativeDensity>{
-                { Lang.GetL(langCode, "propick-density-verypoor"), RelativeDensity.VeryPoor },
-                { Lang.GetL(langCode, "propick-density-poor"), RelativeDensity.Poor },
-                { Lang.GetL(langCode, "propick-density-decent"), RelativeDensity.Decent },
-                { Lang.GetL(langCode, "propick-density-high"), RelativeDensity.High },
-                { Lang.GetL(langCode, "propick-density-veryhigh"), RelativeDensity.VeryHigh },
-                { Lang.GetL(langCode, "propick-density-ultrahigh"), RelativeDensity.UltraHigh }
-            };
+            Dictionary<string, RelativeDensity> relativeDensities = GetDensityMappingForLang(langCode);
 
             foreach (var reading in splits)
             {
                 RelativeDensity relativeDensity = RelativeDensity.Zero;
 
-                foreach (var density in _relativeDensities)
+                foreach (var density in relativeDensities)
                 {
                     if (reading.Contains(density.Key))
                     {
@@ -287,7 +286,7 @@ namespace ProspectorInfo.Map
                 {
                     if (elem.RelativeDensity > RelativeDensity.Miniscule)
                     {
-                        string proPickReading = Lang.Get("propick-reading", Lang.Get(_densityStrings[(int)elem.RelativeDensity - 2]), elem.PageCode, Lang.Get(elem.Name), elem.AbsoluteDensity.ToString("0.#"));
+                        string proPickReading = Lang.Get("propick-reading", Lang.Get(_relativeDensityToLang[elem.RelativeDensity]), elem.PageCode, Lang.Get(elem.Name), elem.AbsoluteDensity.ToString("0.#"));
                         proPickReading = _cleanupRegex.Replace(proPickReading, string.Empty);
                         sb.AppendLine(proPickReading);
                     }
