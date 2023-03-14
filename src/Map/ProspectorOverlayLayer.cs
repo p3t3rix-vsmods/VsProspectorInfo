@@ -57,12 +57,12 @@ namespace ProspectorInfo.Map
                         invMan.SlotModified += Event_SlotModified;
                     }
                 };
+
+                // Save data when leaving and periodically.
                 _clientApi.Event.LeaveWorld += () => {
-                    if (_prospectInfos.HasChanged)
-                    {
-                        _clientApi.SaveDataFile(Filename, _prospectInfos);
-                    }
+                    SaveProspectingData();
                 };
+                _clientApi.World.RegisterGameTickListener(SaveProspectingData, (int) TimeSpan.FromMinutes(10).TotalMilliseconds);
 
                 _clientApi.RegisterCommand("pi", "ProspectorInfo main command. Allows you to toggle the visibility of the chunk texture overlay.", "", OnPiCommand);
 
@@ -76,6 +76,16 @@ namespace ProspectorInfo.Map
             }
         }
 
+        private void SaveProspectingData(float _ = 0) {
+            lock(_prospectInfos)
+            {
+                if (_prospectInfos.HasChanged)
+                {
+                    _clientApi.SaveDataFile(Filename, _prospectInfos);
+                    _prospectInfos.HasChanged = false;
+                }
+            }
+        }
 
         #region Commands/Events
 
@@ -404,9 +414,12 @@ namespace ProspectorInfo.Map
             var posX = pos.X / _chunksize;
             var posZ = pos.Z / _chunksize;
             var newProspectInfo = new ProspectInfo(posX, posZ, message);
-            _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
-            _prospectInfos.Add(newProspectInfo);
-            _prospectInfos.HasChanged = true;
+            lock (_prospectInfos)
+            {
+                _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
+                _prospectInfos.Add(newProspectInfo);
+                _prospectInfos.HasChanged = true;
+            }
 
             _components.RemoveAll(component =>
             {
