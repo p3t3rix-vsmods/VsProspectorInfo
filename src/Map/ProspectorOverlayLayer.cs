@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Foundation.Extensions;
 using HarmonyLib;
-using ProspectorInfo.Models;
 using ProspectorInfo.Utils;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -116,6 +116,13 @@ namespace ProspectorInfo.Map
                                          "E.g. game:ore-emerald, game:ore-bituminouscoal, Cassiterite")
                         .WithArgs(api.ChatCommands.Parsers.OptionalWord("oreName"))
                         .HandleWith(OnHeatmapOreCommand)
+                    .EndSubCommand()
+                    .BeginSubCommand("setsaveintervalminutes")
+                        .WithDescription(".pi setsaveintervalminutes [int] - How often should the prospecting data be saved to disk.<br/>" +
+                                         "Requires leaving/reentering the world. The data is also saved when leaving a world.<br/>" +
+                                         "Sets the \"SaveIntervalMinutes\" config option (default = 1)")
+                        .WithArgs(api.ChatCommands.Parsers.IntRange("interval", 1, 60))
+                        .HandleWith(OnSetSaveIntervalMinutes)
                     .EndSubCommand();
 
                 for (int i = 0; i < _colorTextures.Length; i++)
@@ -229,6 +236,13 @@ namespace ProspectorInfo.Map
             _config.Save(api);
 
             RebuildMap(true);
+            return TextCommandResult.Success();
+        }
+
+        private TextCommandResult OnSetSaveIntervalMinutes(TextCommandCallingArgs args)
+        {
+            _config.SaveIntervalMinutes = (int)args.Parsers[0].GetValue();
+            _config.Save(api);
             return TextCommandResult.Success();
         }
 
