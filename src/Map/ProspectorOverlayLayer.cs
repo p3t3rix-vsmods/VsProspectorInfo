@@ -62,7 +62,8 @@ namespace ProspectorInfo.Map
                 _clientApi.Event.LeaveWorld += () => {
                     SaveProspectingData();
                 };
-                _clientApi.World.RegisterGameTickListener(SaveProspectingData, (int) TimeSpan.FromMinutes(10).TotalMilliseconds);
+                _clientApi.World.RegisterGameTickListener((_) => SaveProspectingData(), 
+                        (int) TimeSpan.FromMinutes(_config.SaveIntervalMinutes).TotalMilliseconds);
 
                 _clientApi.RegisterCommand("pi", "ProspectorInfo main command. Allows you to toggle the visibility of the chunk texture overlay.", "", OnPiCommand);
 
@@ -76,7 +77,7 @@ namespace ProspectorInfo.Map
             }
         }
 
-        private void SaveProspectingData(float _ = 0) {
+        private void SaveProspectingData() {
             lock(_prospectInfos)
             {
                 if (_prospectInfos.HasChanged)
