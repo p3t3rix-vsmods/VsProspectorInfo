@@ -57,14 +57,13 @@ namespace ProspectorInfo.Map
                         invMan.SlotModified += Event_SlotModified;
                     }
                 };
-                _clientApi.Event.PlayerLeave += (p) =>
-                {
-                    if (p == _clientApi?.World.Player)
-                    {
-                        var invMan = p?.InventoryManager?.GetHotbarInventory();
-                        invMan.SlotModified -= Event_SlotModified;
-                    }
+
+                // Save data when leaving and periodically.
+                _clientApi.Event.LeaveWorld += () => {
+                    SaveProspectingData();
                 };
+                _clientApi.World.RegisterGameTickListener((_) => SaveProspectingData(), 
+                        (int) TimeSpan.FromMinutes(_config.SaveIntervalMinutes).TotalMilliseconds);
 
                 _clientApi.ChatCommands.Create("pi")
                     .WithDescription("ProspectorInfo main command. Defaults to toggling the map overlay.")
@@ -129,6 +128,16 @@ namespace ProspectorInfo.Map
             }
         }
 
+        private void SaveProspectingData() {
+            lock(_prospectInfos)
+            {
+                if (_prospectInfos.HasChanged)
+                {
+                    _clientApi.SaveDataFile(Filename, _prospectInfos);
+                    _prospectInfos.HasChanged = false;
+                }
+            }
+        }
 
         #region Commands/Events
 
@@ -293,9 +302,12 @@ namespace ProspectorInfo.Map
             var posX = pos.X / _chunksize;
             var posZ = pos.Z / _chunksize;
             var newProspectInfo = new ProspectInfo(posX, posZ, message);
-            _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
-            _prospectInfos.Add(newProspectInfo);
-            _clientApi.SaveDataFile(Filename, _prospectInfos); //TODO saving the data every time is quite overkill. Should use a more efficient approach.
+            lock (_prospectInfos)
+            {
+                _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
+                _prospectInfos.Add(newProspectInfo);
+                _prospectInfos.HasChanged = true;
+            }
 
             _components.RemoveAll(component =>
             {

@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 using Vintagestory.API.Util;
 
 namespace ProspectorInfo.Map
 {
     internal class ProspectorMessages : List<ProspectInfo> 
     {
+        [JsonIgnore]
+        public bool HasChanged { get; set; } = false;
     }
 
     internal class OreNames : Dictionary<string, string>

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -12,22 +13,28 @@ namespace ProspectorInfo.Map
         
         private static readonly Dictionary<string, string> _allOres = new OreNames();
         private static readonly HashSet<string> _foundOres = new HashSet<string>();
-        private static readonly List<string> _densityStrings = new List<string>{ 
-            "propick-density-verypoor",
-            "propick-density-poor",
-            "propick-density-decent",
-            "propick-density-high",
-            "propick-density-veryhigh",
-            "propick-density-ultrahigh"
-        };
-        private static readonly Dictionary<string, RelativeDensity> _translatedDensities = new Dictionary<string, RelativeDensity>{
-            { Lang.Get("propick-density-verypoor"), RelativeDensity.VeryPoor },
-            { Lang.Get("propick-density-poor"), RelativeDensity.Poor },
-            { Lang.Get("propick-density-decent"), RelativeDensity.Decent },
-            { Lang.Get("propick-density-high"), RelativeDensity.High },
-            { Lang.Get("propick-density-veryhigh"), RelativeDensity.VeryHigh },
-            { Lang.Get("propick-density-ultrahigh"), RelativeDensity.UltraHigh }
-        };
+
+        /// <summary>
+        /// Maps relative densities to their Lang string.
+        /// Note that not every RelativeDensity has such a mapping.
+        /// </summary>
+        private static readonly Dictionary<RelativeDensity, string> _relativeDensityToLang = new Dictionary<RelativeDensity, string>{
+                { RelativeDensity.VeryPoor, "propick-density-verypoor" },
+                { RelativeDensity.Poor, "propick-density-poor"},
+                { RelativeDensity.Decent, "propick-density-decent" },
+                { RelativeDensity.High , "propick-density-high" },
+                { RelativeDensity.VeryHigh , "propick-density-veryhigh" },
+                { RelativeDensity.UltraHigh , "propick-density-ultrahigh" }
+            };
+
+        private static Dictionary<string, RelativeDensity> GetDensityMappingForLang(string langCode)
+        {
+            return _relativeDensityToLang.ToDictionary(entry => Lang.GetL(langCode, entry.Value), entry => entry.Key);
+        }
+        private static readonly Dictionary<string, RelativeDensity> _translatedDensities = GetDensityMappingForLang(Lang.CurrentLocale);
+
+        
+
         private static readonly Regex _cleanupRegex = new Regex("<.*?>", RegexOptions.Compiled);
         private static readonly Regex _headerParsingRegex = new Regex(Lang.Get("propick-reading-title", ".*?"), RegexOptions.Compiled);
         private static readonly Regex _readingParsingRegex = new Regex(
@@ -129,6 +136,19 @@ namespace ProspectorInfo.Map
         }
 
         /// <summary>
+        /// The absolute density values that we get from the server are formatted with the servers system/OS locale (not game locale).
+        /// Thus, we might get either ',' or '.' as a decimal separator.
+        /// Since we cannot know the locale in advance, we replace all `,` with `.` and parse the number
+        /// using the invariant culture, i.e., one that uses `.` as a hardcoded decimal separator.
+        /// This can get problematic if we encounter numbers with digit grouping, e.g., `1,000.00`,
+        /// but hopefully, this will never be case.
+        /// </summary>
+        private static double ParseDoubleInvariant(string value)
+        {
+            return double.Parse(value.Replace(",", "."), CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
         /// Tries to parse the given <paramref name="message"/> in the current locale. If the locale of <paramref name="message"/> is not equal to the current locale,
         /// the message is just saved as is without parsing.
         /// If any of the exceptions below is thrown, <see cref="Values"/> should be cleared and <paramref name="message"/> should be saved to <see cref="Message"/>.
@@ -156,7 +176,7 @@ namespace ProspectorInfo.Map
                         _allOres[match.Groups["oreName"].Value],
                         match.Groups["pageCode"].Value,
                         _translatedDensities[match.Groups["relativeDensity"].Value],
-                        double.Parse(match.Groups["absoluteDensity"].Value)
+                        ParseDoubleInvariant(match.Groups["absoluteDensity"].Value)
                     ));
                 } else
                 {
@@ -205,20 +225,13 @@ namespace ProspectorInfo.Map
             foreach (var ore in _allOres)
                 ores[Lang.GetL(langCode, ore.Value)] = ore.Value;
 
-            Dictionary<string, RelativeDensity> _relativeDensities = new Dictionary<string, RelativeDensity>{
-                { Lang.GetL(langCode, "propick-density-verypoor"), RelativeDensity.VeryPoor },
-                { Lang.GetL(langCode, "propick-density-poor"), RelativeDensity.Poor },
-                { Lang.GetL(langCode, "propick-density-decent"), RelativeDensity.Decent },
-                { Lang.GetL(langCode, "propick-density-high"), RelativeDensity.High },
-                { Lang.GetL(langCode, "propick-density-veryhigh"), RelativeDensity.VeryHigh },
-                { Lang.GetL(langCode, "propick-density-ultrahigh"), RelativeDensity.UltraHigh }
-            };
+            Dictionary<string, RelativeDensity> relativeDensities = GetDensityMappingForLang(langCode);
 
             foreach (var reading in splits)
             {
                 RelativeDensity relativeDensity = RelativeDensity.Zero;
 
-                foreach (var density in _relativeDensities)
+                foreach (var density in relativeDensities)
                 {
                     if (reading.Contains(density.Key))
                     {
@@ -229,7 +242,7 @@ namespace ProspectorInfo.Map
 
                 if (relativeDensity != RelativeDensity.Zero) 
                 {
-                    double absoluteDensity = double.Parse(_absoluteDensityRegex.Match(reading).Value);
+                    double absoluteDensity = ParseDoubleInvariant(_absoluteDensityRegex.Match(reading).Value);
                     
                     string oreName = null;
                     foreach (var ore in ores)
@@ -273,7 +286,7 @@ namespace ProspectorInfo.Map
                 {
                     if (elem.RelativeDensity > RelativeDensity.Miniscule)
                     {
-                        string proPickReading = Lang.Get("propick-reading", Lang.Get(_densityStrings[(int)elem.RelativeDensity - 2]), elem.PageCode, Lang.Get(elem.Name), elem.AbsoluteDensity.ToString("0.#"));
+                        string proPickReading = Lang.Get("propick-reading", Lang.Get(_relativeDensityToLang[elem.RelativeDensity]), elem.PageCode, Lang.Get(elem.Name), elem.AbsoluteDensity.ToString("0.#"));
                         proPickReading = _cleanupRegex.Replace(proPickReading, string.Empty);
                         sb.AppendLine(proPickReading);
                     }

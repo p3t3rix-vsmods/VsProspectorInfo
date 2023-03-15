@@ -19,5 +19,6 @@ namespace ProspectorInfo
         public MapMode MapMode { get; set; } = MapMode.Default;
         public string HeatMapOre { get; set; } = null;
         public bool ShowGui { get; set; } = true;
+        public int SaveIntervalMinutes { get; set; } = 1;
     }
 }
