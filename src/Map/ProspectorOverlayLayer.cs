@@ -26,6 +26,7 @@ namespace ProspectorInfo.Map
         private readonly IWorldMapManager _worldMapManager;
         private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
         private bool _temporaryRenderOverride = false;
+        private readonly ChatDataSharing _chatDataSharing;
         private static ModConfig _config;
         private static GuiDialog _settingsDialog;
 
@@ -47,6 +48,7 @@ namespace ProspectorInfo.Map
             if (api.Side == EnumAppSide.Client)
             {
                 _clientApi = (ICoreClientAPI)api;
+                _chatDataSharing = new ChatDataSharing(_clientApi, this);
                 _clientApi.Event.ChatMessage += OnChatMessage;
                 _clientApi.Event.AfterActiveSlotChanged += Event_AfterActiveSlotChanged;
                 _clientApi.Event.PlayerJoin += (p) =>
@@ -123,6 +125,10 @@ namespace ProspectorInfo.Map
                                          "Sets the \"SaveIntervalMinutes\" config option (default = 1)")
                         .WithArgs(api.ChatCommands.Parsers.IntRange("interval", 1, 60))
                         .HandleWith(OnSetSaveIntervalMinutes)
+                    .EndSubCommand()
+                    .BeginSubCommand("share")
+                        .WithDescription(".pi share - Share your prospecting data in the cat")
+                        .HandleWith(OnShare)
                     .EndSubCommand();
 
                 for (int i = 0; i < _colorTextures.Length; i++)
@@ -273,6 +279,15 @@ namespace ProspectorInfo.Map
         {
             _config.SaveIntervalMinutes = (int)args.Parsers[0].GetValue();
             _config.Save(api);
+            return TextCommandResult.Success();
+        }
+
+        private TextCommandResult OnShare(TextCommandCallingArgs args)
+        {
+            lock(_prospectInfos)
+            {
+                _chatDataSharing.ShareData(_prospectInfos);
+            }
             return TextCommandResult.Success();
         }
 
