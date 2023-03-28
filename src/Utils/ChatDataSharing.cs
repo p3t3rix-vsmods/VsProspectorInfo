@@ -6,6 +6,7 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using ProspectorInfo.Map;
 using System.Linq;
+using System.Text;
 
 namespace ProspectorInfo.Utils
 {
@@ -23,7 +24,7 @@ namespace ProspectorInfo.Utils
         }
 
         private void OnChatMessage(int groupId, string message, EnumChatType chattype, string data) {
-            if(chattype != EnumChatType.OthersMessage) 
+            if (chattype != EnumChatType.OthersMessage) 
                 return;
 
             int startIdx = message.IndexOf(CHAT_PREFIX);
@@ -42,11 +43,12 @@ namespace ProspectorInfo.Utils
             {
                 return;
             }
-            api.SendChatMessage(CHAT_PREFIX + data);
+            // Add some whitespace before sending, to avoid lag spikes when rendering the chat message.
+            // The base64 deserializer ignores whitespace.
+            api.SendChatMessage(CHAT_PREFIX + AddWhitespace(data, 64));
         }
 
         private string SerializeToBase64<T>(T data) {
-            byte[] result;
             try
             {
                 using (var resultStream = new MemoryStream())
@@ -55,7 +57,7 @@ namespace ProspectorInfo.Utils
                     {
                         Serializer.Serialize(compressionStream, data);
                     }
-                    result = resultStream.ToArray();
+                    byte[] result = resultStream.ToArray();
                     return Convert.ToBase64String(result);
                 }
             }
@@ -64,6 +66,25 @@ namespace ProspectorInfo.Utils
                 api.Logger.Error("Failed to serialize prospecting data", ex);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Little hackery to avoid lag spikes when rendering a single long string without whitespace.
+        /// </summary>
+        private static string AddWhitespace(string stringResult, int interval)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+            int currentPosition = 0;
+            while (currentPosition + interval < stringResult.Length)
+            {
+                stringBuilder.Append(stringResult.Substring(currentPosition, interval)).Append(" ");
+                currentPosition += interval;
+            }
+            if (currentPosition < stringResult.Length)
+            {
+                stringBuilder.Append(stringResult.Substring(currentPosition));
+            }
+            return stringBuilder.ToString();
         }
 
         private T DeserializeFromBase64<T>(string message) where T : class 
