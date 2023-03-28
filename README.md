@@ -16,6 +16,7 @@ Just drop the file into your mods folder. You just need this mod on the client, 
     .pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore.
         No argument resets the heatmap back to all ores. Can only handle the ore name in your selected language or the ore tag.
         Examples: game:ore-emerald, game:ore-bituminouscoal, Cassiterite.
+    .pi setsaveintervalminutes [1-60] - Periodically store the prospecting data every x minutes.
 
 Each command updates the respective configuration option.
 
@@ -31,6 +32,7 @@ Each command updates the respective configuration option.
                               based on the player equipping/unequipping a prospecting pick. Default: true
     HeatMapOre [oreName] - The ore selected for the heatmap.
     MapMode [0-1] - The mode of the map.
+    SaveIntervalMinutes [1-60] - Periodically store the prospecting data every x minutes.
 
 ## Usage
 
