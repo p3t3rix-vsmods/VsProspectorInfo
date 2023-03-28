@@ -22,7 +22,7 @@ namespace ProspectorInfo.Map
         private readonly ProspectorMessages _prospectInfos;
         private readonly int _chunksize;
         private readonly ICoreClientAPI _clientApi;
-        private readonly Dictionary<Tuple<int, int>, ProspectorOverlayMapComponent> _components = new Dictionary<Tuple<int, int>, ProspectorOverlayMapComponent>();
+        private readonly Dictionary<ChunkCoordinates, ProspectorOverlayMapComponent> _components = new Dictionary<ChunkCoordinates, ProspectorOverlayMapComponent>();
         private readonly IWorldMapManager _worldMapManager;
         private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
         private bool _temporaryRenderOverride = false;
@@ -38,10 +38,10 @@ namespace ProspectorInfo.Map
         {
             _worldMapManager = mapSink;
             _chunksize = api.World.BlockAccessor.ChunkSize;
-            _prospectInfos = api.LoadOrCreateDataFile<ProspectorMessages>(Filename);
+            _prospectInfos = LoadProspectingData();
             _headerParsingRegex = new Regex(Lang.Get("propick-reading-title", ".*?"), RegexOptions.Compiled);
 
-            var modSystem = this.api.ModLoader.GetModSystem<ProspectorInfoModSystem>();
+            var modSystem = api.ModLoader.GetModSystem<ProspectorInfoModSystem>();
             _config = modSystem.Config;
 
             if (api.Side == EnumAppSide.Client)
@@ -135,16 +135,46 @@ namespace ProspectorInfo.Map
             }
         }
 
+
+        #region Handling Prospecting Data
+        /// <summary>
+        /// Loads the prospecting data from a serialized list and converts it to a dictionary
+        /// for easier handling.
+        /// </summary>
+        private ProspectorMessages LoadProspectingData() {
+            var temp = api.LoadOrCreateDataFile<List<ProspectInfo>>(Filename);
+            var result = new ProspectorMessages();
+            foreach (var item in temp)
+            {
+                result[item.ChunkCoordinates] = item;
+            }
+            return result;
+        }
+
         private void SaveProspectingData() {
             lock(_prospectInfos)
             {
                 if (_prospectInfos.HasChanged)
                 {
-                    _clientApi.SaveDataFile(Filename, _prospectInfos);
+                    _clientApi.SaveDataFile(Filename, _prospectInfos.Values.ToList());
                     _prospectInfos.HasChanged = false;
                 }
             }
         }
+
+        public void AddOrUpdateProspectingData(params ProspectInfo[] information) {
+            lock (_prospectInfos)
+            {
+                foreach (ProspectInfo info in information)
+                {
+                    _prospectInfos[info.ChunkCoordinates] = info;
+                    var newComponent = new ProspectorOverlayMapComponent(_clientApi, info.ChunkCoordinates, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
+                    _components[info.ChunkCoordinates] = newComponent;
+                }
+                _prospectInfos.HasChanged = true;
+            }
+        }
+        #endregion
 
         #region Commands/Events
 
@@ -316,15 +346,7 @@ namespace ProspectorInfo.Map
             var posX = pos.X / _chunksize;
             var posZ = pos.Z / _chunksize;
             var newProspectInfo = new ProspectInfo(posX, posZ, message);
-            lock (_prospectInfos)
-            {
-                _prospectInfos.RemoveAll(m => m.X == posX && m.Z == posZ);
-                _prospectInfos.Add(newProspectInfo);
-                _prospectInfos.HasChanged = true;
-            }
-
-            var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, newProspectInfo.GetMessage(), _colorTextures[(int)GetRelativeDensity(newProspectInfo)]);
-            _components[Tuple.Create(posX, posZ)] = newComponent;
+            AddOrUpdateProspectingData(newProspectInfo);
 
             blocksSinceLastSuccessList.Clear();
         }
@@ -350,10 +372,13 @@ namespace ProspectorInfo.Map
                 }
             }
 
-            foreach (var info in _prospectInfos)
+            lock (_prospectInfos)
             {
-                var component = new ProspectorOverlayMapComponent(_clientApi, info.X, info.Z, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
-                _components[Tuple.Create(info.X, info.Z)] = component;
+                foreach (var info in _prospectInfos.Values)
+                {
+                    var component = new ProspectorOverlayMapComponent(_clientApi, info.ChunkCoordinates, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
+                    _components[info.ChunkCoordinates] = component;
+                }
             }
         }
 
@@ -391,7 +416,7 @@ namespace ProspectorInfo.Map
         {
             foreach(var texture in _colorTextures)
             {
-                texture.Dispose();
+                texture?.Dispose();
             }
             base.Dispose();
         }

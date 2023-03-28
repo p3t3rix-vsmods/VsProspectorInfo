@@ -65,6 +65,24 @@ namespace ProspectorInfo.Map
         public readonly int Z;
 
         /// <summary>
+        /// We don't want to change the serialization format,
+        /// so we keep the coordinates in a cache.
+        /// </summary>
+        [Newtonsoft.Json.JsonIgnore]
+        private ChunkCoordinates? _coordinates = null;
+        [Newtonsoft.Json.JsonIgnore]
+        public ChunkCoordinates ChunkCoordinates
+        { 
+            get {
+                if (_coordinates == null)
+                {
+                    _coordinates = new ChunkCoordinates(X, Z);
+                }
+                return (ChunkCoordinates)_coordinates;
+            }
+        }
+
+        /// <summary>
         /// A sorted list of all ore occurencies in this chunk. The ore with the highest relative density is first.
         /// </summary>
         public readonly List<OreOccurence> Values;

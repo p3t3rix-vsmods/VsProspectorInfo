@@ -4,9 +4,7 @@ using Vintagestory.API.Util;
 
 namespace ProspectorInfo.Map
 {
-    // Should be a dictionary with coordinates as key, but NewtonSoft Json does not play
-    // nicely with complex objects as key...
-    internal class ProspectorMessages : List<ProspectInfo> 
+    internal class ProspectorMessages : Dictionary<ChunkCoordinates, ProspectInfo> 
     {
         [JsonIgnore]
         public bool HasChanged { get; set; } = false;
@@ -58,5 +56,16 @@ namespace ProspectorInfo.Map
     {
         Default,
         Heatmap
+    }
+    public struct ChunkCoordinates
+    {
+        public int X;
+        public int Z;
+
+        public ChunkCoordinates(int x, int z)
+        {
+            X = x;
+            Z = z;
+        }
     }
 }
