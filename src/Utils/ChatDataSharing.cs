@@ -23,10 +23,9 @@ namespace ProspectorInfo.Utils
         }
 
         private void OnChatMessage(int groupId, string message, EnumChatType chattype, string data) {
-            /*if(chattype != EnumChatType.OthersMessage) 
-            {
+            if(chattype != EnumChatType.OthersMessage) 
                 return;
-            }*/
+
             int startIdx = message.IndexOf(CHAT_PREFIX);
             if (startIdx == -1)
                 return;
