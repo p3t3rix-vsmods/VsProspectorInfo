@@ -17,6 +17,7 @@ Just drop the file into your mods folder. You just need this mod on the client, 
         No argument resets the heatmap back to all ores. Can only handle the ore name in your selected language or the ore tag.
         Examples: game:ore-emerald, game:ore-bituminouscoal, Cassiterite.
     .pi setsaveintervalminutes [1-60] - Periodically store the prospecting data every x minutes.
+    .pi share - Share your prospecting data via the chat. Clients with this mod will update their own data based on the new information.
 
 Each command updates the respective configuration option.
 
