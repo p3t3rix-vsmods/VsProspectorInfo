@@ -51,7 +51,7 @@ namespace ProspectorInfo.Utils
             {
                 using (var resultStream = new MemoryStream())
                 {
-                    using (var compressionStream = new DeflateStream(resultStream, CompressionLevel.Fastest))
+                    using (var compressionStream = new DeflateStream(resultStream, CompressionLevel.Optimal))
                     {
                         Serializer.Serialize(compressionStream, data);
                     }
