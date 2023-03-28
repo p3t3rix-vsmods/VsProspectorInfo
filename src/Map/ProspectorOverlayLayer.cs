@@ -22,7 +22,7 @@ namespace ProspectorInfo.Map
         private readonly ProspectorMessages _prospectInfos;
         private readonly int _chunksize;
         private readonly ICoreClientAPI _clientApi;
-        private readonly List<MapComponent> _components = new List<MapComponent>();
+        private readonly Dictionary<Tuple<int, int>, ProspectorOverlayMapComponent> _components = new Dictionary<Tuple<int, int>, ProspectorOverlayMapComponent>();
         private readonly IWorldMapManager _worldMapManager;
         private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
         private bool _temporaryRenderOverride = false;
@@ -323,14 +323,8 @@ namespace ProspectorInfo.Map
                 _prospectInfos.HasChanged = true;
             }
 
-            _components.RemoveAll(component =>
-            {
-                var castComponent = component as ProspectorOverlayMapComponent;
-                return castComponent?.ChunkX == posX && castComponent.ChunkZ == posZ;
-            });
-
             var newComponent = new ProspectorOverlayMapComponent(_clientApi, posX, posZ, newProspectInfo.GetMessage(), _colorTextures[(int)GetRelativeDensity(newProspectInfo)]);
-            _components.Add(newComponent);
+            _components[Tuple.Create(posX, posZ)] = newComponent;
 
             blocksSinceLastSuccessList.Clear();
         }
@@ -345,11 +339,6 @@ namespace ProspectorInfo.Map
 
         public void RebuildMap(bool rebuildTexture = false)
         {
-            foreach (var component in _components)
-            {
-                component.Dispose();
-            }
-
             _components.Clear();
 
             if (rebuildTexture)
@@ -364,7 +353,7 @@ namespace ProspectorInfo.Map
             foreach (var info in _prospectInfos)
             {
                 var component = new ProspectorOverlayMapComponent(_clientApi, info.X, info.Z, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
-                _components.Add(component);
+                _components[Tuple.Create(info.X, info.Z)] = component;
             }
         }
 
@@ -381,7 +370,7 @@ namespace ProspectorInfo.Map
 
         public override void OnMouseMoveClient(MouseEvent args, GuiElementMap mapElem, StringBuilder hoverText)
         {
-            foreach (var component in _components)
+            foreach (var component in _components.Values)
             {
                 component.OnMouseMove(args, mapElem, hoverText);
             }
@@ -392,7 +381,7 @@ namespace ProspectorInfo.Map
             if (!_temporaryRenderOverride && UserDisabledMapTextures())
                 return;
 
-            foreach (var component in _components)
+            foreach (var component in _components.Values)
             {
                 component.Render(mapElem, dt);
             }
@@ -400,7 +389,10 @@ namespace ProspectorInfo.Map
 
         public override void Dispose()
         {
-            _components.ForEach(c => c.Dispose());
+            foreach(var texture in _colorTextures)
+            {
+                texture.Dispose();
+            }
             base.Dispose();
         }
 
