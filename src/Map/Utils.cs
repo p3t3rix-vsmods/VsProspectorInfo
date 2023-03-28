@@ -4,6 +4,8 @@ using Vintagestory.API.Util;
 
 namespace ProspectorInfo.Map
 {
+    // Should be a dictionary with coordinates as key, but NewtonSoft Json does not play
+    // nicely with complex objects as key...
     internal class ProspectorMessages : List<ProspectInfo> 
     {
         [JsonIgnore]
