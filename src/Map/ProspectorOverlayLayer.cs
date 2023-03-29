@@ -127,7 +127,7 @@ namespace ProspectorInfo.Map
                         .HandleWith(OnSetSaveIntervalMinutes)
                     .EndSubCommand()
                     .BeginSubCommand("share")
-                        .WithDescription(".pi share - Share your prospecting data in the cat")
+                        .WithDescription(".pi share - Share your prospecting data in the chat")
                         .HandleWith(OnShare)
                     .EndSubCommand();
 
