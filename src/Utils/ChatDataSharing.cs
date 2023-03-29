@@ -71,18 +71,18 @@ namespace ProspectorInfo.Utils
         /// <summary>
         /// Little hackery to avoid lag spikes when rendering a single long string without whitespace.
         /// </summary>
-        private static string AddWhitespace(string stringResult, int interval)
+        private static string AddWhitespace(string input, int interval)
         {
             StringBuilder stringBuilder = new StringBuilder();
             int currentPosition = 0;
-            while (currentPosition + interval < stringResult.Length)
+            while (currentPosition + interval < input.Length)
             {
-                stringBuilder.Append(stringResult.Substring(currentPosition, interval)).Append(" ");
+                stringBuilder.Append(input.Substring(currentPosition, interval)).Append(" ");
                 currentPosition += interval;
             }
-            if (currentPosition < stringResult.Length)
+            if (currentPosition < input.Length)
             {
-                stringBuilder.Append(stringResult.Substring(currentPosition));
+                stringBuilder.Append(input.Substring(currentPosition));
             }
             return stringBuilder.ToString();
         }
