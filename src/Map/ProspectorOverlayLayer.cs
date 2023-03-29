@@ -61,9 +61,7 @@ namespace ProspectorInfo.Map
                 };
 
                 // Save data when leaving and periodically.
-                _clientApi.Event.LeaveWorld += () => {
-                    SaveProspectingData();
-                };
+                _clientApi.Event.LeaveWorld += SaveProspectingData;
                 _clientApi.World.RegisterGameTickListener((_) => SaveProspectingData(), 
                         (int) TimeSpan.FromMinutes(_config.SaveIntervalMinutes).TotalMilliseconds);
 
