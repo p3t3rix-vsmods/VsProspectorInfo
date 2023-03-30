@@ -186,7 +186,7 @@ namespace ProspectorInfo.Map
             else
                 _config.RenderTexturesOnMap = (bool) args.Parsers[0].GetValue();
             _config.Save(api);
-            return TextCommandResult.Success();
+            return TextCommandResult.Success($"Set RenderTexturesOnMap to {_config.RenderTexturesOnMap}.");
         }
 
         private TextCommandResult OnShowGuiCommand(TextCommandCallingArgs args)
@@ -198,32 +198,37 @@ namespace ProspectorInfo.Map
             _config.Save(api);
             if (_worldMapManager.IsOpened)
                 _settingsDialog.TryOpen();
-            return TextCommandResult.Success();
+            return TextCommandResult.Success($"Set ShowGui to {_config.ShowGui}.");
         }
 
         private TextCommandResult OnSetColorCommand(TextCommandCallingArgs args)
         {
             ColorWithAlphaUpdate colorUpdate = (ColorWithAlphaUpdate) args.Parsers[1].GetValue();
+            string changedColorSetting;
             switch ((string)args.Parsers[0].GetValue()) 
             {
                 case "overlay":
                     colorUpdate.ApplyUpdateTo(_config.TextureColor);
+                    changedColorSetting = "TextureColor";
                     break;
                 case "border":
                     colorUpdate.ApplyUpdateTo(_config.BorderColor);
+                    changedColorSetting = "BorderColor";
                     break;
                 case "lowheat":
                     colorUpdate.ApplyUpdateTo(_config.LowHeatColor);
+                    changedColorSetting = "LowHeadColor";
                     break;
                 case "highheat":
                     colorUpdate.ApplyUpdateTo(_config.HighHeatColor);
+                    changedColorSetting = "HighHeatColor";
                     break;
                 default:
-                    return TextCommandResult.Error("Unknown element to set color for");
+                    return TextCommandResult.Error("Unknown element to set color for.");
             }
             _config.Save(api);
             RebuildMap(true);
-            return TextCommandResult.Success();
+            return TextCommandResult.Success($"Updated color for {changedColorSetting}.");
         }
 
         private TextCommandResult OnSetBorderThicknessCommand(TextCommandCallingArgs args)
@@ -232,7 +237,7 @@ namespace ProspectorInfo.Map
             _config.BorderThickness = newThickness;
             _config.Save(api);
             RebuildMap(true);
-            return TextCommandResult.Success();
+            return TextCommandResult.Success($"Set BorderThickness to {_config.BorderThickness}.");
         }
 
         private TextCommandResult OnShowBorderCommand(TextCommandCallingArgs args)
@@ -244,7 +249,7 @@ namespace ProspectorInfo.Map
             _config.Save(api);
 
             RebuildMap(true);
-            return TextCommandResult.Success();
+            return TextCommandResult.Success($"Set RenderBorder to {_config.RenderBorder}.");
         }
 
         private TextCommandResult OnSetModeCommand(TextCommandCallingArgs args)
@@ -254,7 +259,7 @@ namespace ProspectorInfo.Map
             _config.Save(api);
 
             RebuildMap(true);
-            return TextCommandResult.Success();
+            return TextCommandResult.Success($"Set MapMode to {_config.MapMode}.");
         }
 
         private TextCommandResult OnHeatmapOreCommand(TextCommandCallingArgs args)
@@ -266,14 +271,14 @@ namespace ProspectorInfo.Map
             _config.Save(api);
 
             RebuildMap(true);
-            return TextCommandResult.Success();
+            return TextCommandResult.Success($"Set HeatMapOre to {_config.HeatMapOre}.");
         }
 
         private TextCommandResult OnSetSaveIntervalMinutes(TextCommandCallingArgs args)
         {
             _config.SaveIntervalMinutes = (int)args.Parsers[0].GetValue();
             _config.Save(api);
-            return TextCommandResult.Success();
+            return TextCommandResult.Success($"Set SaveIntervalMinutes to {_config.SaveIntervalMinutes}.");
         }
 
         private void Event_SlotModified(int slotId)
