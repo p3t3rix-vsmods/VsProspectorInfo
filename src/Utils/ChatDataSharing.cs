@@ -16,10 +16,12 @@ namespace ProspectorInfo.Utils
 
         private readonly ICoreClientAPI api;
         private readonly ProspectorOverlayLayer prospectorOverlayLayer;
-        public ChatDataSharing(ICoreClientAPI api, ProspectorOverlayLayer prospectorOverlayLayer)
+        private readonly ModConfig modConfig;
+        public ChatDataSharing(ICoreClientAPI api, ProspectorOverlayLayer prospectorOverlayLayer, ModConfig modConfig)
         {
             this.api = api;
             this.prospectorOverlayLayer = prospectorOverlayLayer;
+            this.modConfig = modConfig;
             api.Event.ChatMessage += OnChatMessage;
         }
 
@@ -31,6 +33,13 @@ namespace ProspectorInfo.Utils
             if (startIdx == -1)
                 return;
 
+            if (!modConfig.AcceptChatSharing)
+            {
+                api.ShowChatMessage("Someone shared prospecting data in chat but you currently don't accept data from the chat.<br/>" +
+                    "Use '.pi aceeptchatsharing true' to accept prospecting data in the future.");
+                return;
+            }
+
             var result = DeserializeFromBase64<ProspectorMessages>(message.Substring(startIdx + CHAT_PREFIX.Length));
             if (result != null)
                 prospectorOverlayLayer.AddOrUpdateProspectingData(result.Values.ToArray());
@@ -40,9 +49,8 @@ namespace ProspectorInfo.Utils
         {
             string data = SerializeToBase64<ProspectorMessages>(messages);
             if (data == null) 
-            {
                 return;
-            }
+
             // Add some whitespace before sending, to avoid lag spikes when rendering the chat message.
             // The base64 deserializer ignores whitespace.
             api.SendChatMessage(CHAT_PREFIX + AddWhitespace(data, 64));

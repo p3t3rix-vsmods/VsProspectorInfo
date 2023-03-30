@@ -18,6 +18,7 @@ Just drop the file into your mods folder. You just need this mod on the client, 
         Examples: game:ore-emerald, game:ore-bituminouscoal, Cassiterite.
     .pi setsaveintervalminutes [1-60] - Periodically store the prospecting data every x minutes.
     .pi share - Share your prospecting data via the chat. Clients with this mod will update their own data based on the new information.
+    .pi aceeptchatsharing true - Accept prospecting data from the chat.
 
 Each command updates the respective configuration option.
 
@@ -34,6 +35,7 @@ Each command updates the respective configuration option.
     HeatMapOre [oreName] - The ore selected for the heatmap.
     MapMode [0-1] - The mode of the map.
     SaveIntervalMinutes [1-60] - Periodically store the prospecting data every x minutes.
+    AcceptChatSharing [bool] - Accept prospecting data shared by other players in the chat? Default: false
 
 ## Usage
 

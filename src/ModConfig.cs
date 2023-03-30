@@ -20,5 +20,6 @@ namespace ProspectorInfo
         public string HeatMapOre { get; set; } = null;
         public bool ShowGui { get; set; } = true;
         public int SaveIntervalMinutes { get; set; } = 1;
+        public bool AcceptChatSharing { get; set; } = false;
     }
 }

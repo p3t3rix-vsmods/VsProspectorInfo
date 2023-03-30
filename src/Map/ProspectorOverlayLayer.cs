@@ -48,7 +48,7 @@ namespace ProspectorInfo.Map
             if (api.Side == EnumAppSide.Client)
             {
                 _clientApi = (ICoreClientAPI)api;
-                _chatDataSharing = new ChatDataSharing(_clientApi, this);
+                _chatDataSharing = new ChatDataSharing(_clientApi, this, _config);
                 _clientApi.Event.ChatMessage += OnChatMessage;
                 _clientApi.Event.AfterActiveSlotChanged += Event_AfterActiveSlotChanged;
                 _clientApi.Event.PlayerJoin += (p) =>
@@ -127,6 +127,11 @@ namespace ProspectorInfo.Map
                     .BeginSubCommand("share")
                         .WithDescription(".pi share - Share your prospecting data in the chat")
                         .HandleWith(OnShare)
+                    .EndSubCommand()
+                    .BeginSubCommand("acceptchatsharing")
+                        .WithDescription(".pi acceptchatsharing [bool] - Accept prospecting data shared by other players via '.pi share'.")
+                        .WithArgs(api.ChatCommands.Parsers.OptionalBool("accept"))
+                        .HandleWith(OnAcceptChatSharing)
                     .EndSubCommand();
 
                 for (int i = 0; i < _colorTextures.Length; i++)
@@ -286,7 +291,17 @@ namespace ProspectorInfo.Map
             {
                 _chatDataSharing.ShareData(_prospectInfos);
             }
-            return TextCommandResult.Success();
+            return TextCommandResult.Success("Shared data in chat.");
+        }
+
+        private TextCommandResult OnAcceptChatSharing(TextCommandCallingArgs args)
+        {
+            if (args.Parsers[0].IsMissing)
+                _config.AcceptChatSharing = !_config.AcceptChatSharing;
+            else
+                _config.AcceptChatSharing = (bool)args.Parsers[0].GetValue();
+            _config.Save(api);
+            return TextCommandResult.Success($"Set AcceptChatSharing to {_config.AcceptChatSharing}.");
         }
 
         private void Event_SlotModified(int slotId)
