@@ -34,7 +34,7 @@ Each command updates the respective configuration option.
                               based on the player equipping/unequipping a prospecting pick. Default: true
     HeatMapOre [oreName] - The ore selected for the heatmap.
     MapMode [0-1] - The mode of the map.
-    SaveIntervalMinutes [1-60] - Periodically store the prospecting data every x minutes.
+    SaveIntervalMinutes [1-60] - Periodically store the prospecting data every x minutes. Default: 1
     AcceptChatSharing [bool] - Accept prospecting data shared by other players in the chat? Default: false
 
 ## Usage
