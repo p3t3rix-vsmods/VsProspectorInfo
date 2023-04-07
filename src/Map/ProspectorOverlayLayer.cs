@@ -179,6 +179,7 @@ namespace ProspectorInfo.Map
                     _prospectInfos[info.ChunkCoordinates] = info;
                     var newComponent = new ProspectorOverlayMapComponent(_clientApi, info.ChunkCoordinates, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
                     _components[info.ChunkCoordinates] = newComponent;
+                    info.AddFoundOres();
                 }
                 _prospectInfos.HasChanged = true;
             }

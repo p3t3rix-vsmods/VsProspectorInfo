@@ -124,8 +124,7 @@ namespace ProspectorInfo.Map
             } 
             else
             {
-                foreach (var val in values)
-                    _foundOres.Add(val.Name);
+                AddFoundOres();
             }            
         }
 
@@ -162,6 +161,12 @@ namespace ProspectorInfo.Map
             {
                 return (X * 397) ^ Z;
             }
+        }
+
+        public void AddFoundOres()
+        {
+            foreach (var val in Values)
+                _foundOres.Add(val.Name);
         }
 
         /// <summary>
@@ -220,8 +225,7 @@ namespace ProspectorInfo.Map
                 }
             }
 
-            foreach (var val in Values)
-                _foundOres.Add(val.Name);
+            AddFoundOres();
         }
 
         /// <summary>
@@ -291,8 +295,7 @@ namespace ProspectorInfo.Map
                 }
             }
 
-            foreach (var val in Values)
-                _foundOres.Add(val.Name);
+            AddFoundOres();
 
             Message = null;
         }
