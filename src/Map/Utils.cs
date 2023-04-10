@@ -4,7 +4,7 @@ using Vintagestory.API.Util;
 
 namespace ProspectorInfo.Map
 {
-    internal class ProspectorMessages : Dictionary<ChunkCoordinates, ProspectInfo> 
+    internal class ProspectorMessages : Dictionary<ChunkCoordinate, ProspectInfo> 
     {
         [JsonIgnore]
         public bool HasChanged { get; set; } = false;
@@ -57,12 +57,12 @@ namespace ProspectorInfo.Map
         Default,
         Heatmap
     }
-    public struct ChunkCoordinates
+    public struct ChunkCoordinate
     {
         public int X;
         public int Z;
 
-        public ChunkCoordinates(int x, int z)
+        public ChunkCoordinate(int x, int z)
         {
             X = x;
             Z = z;
