@@ -4,7 +4,7 @@ using Vintagestory.API.Util;
 
 namespace ProspectorInfo.Map
 {
-    internal class ProspectorMessages : Dictionary<ChunkCoordinates, ProspectInfo> 
+    internal class ProspectorMessages : Dictionary<ChunkCoordinate, ProspectInfo> 
     {
         [JsonIgnore]
         public bool HasChanged { get; set; } = false;
@@ -64,14 +64,14 @@ namespace ProspectorInfo.Map
     }
 
     [ProtoBuf.ProtoContract(ImplicitFields = ProtoBuf.ImplicitFields.None)]
-    public struct ChunkCoordinates
+    public struct ChunkCoordinate
     {
         [ProtoBuf.ProtoMember(1)]
         public int X;
         [ProtoBuf.ProtoMember(2)]
         public int Z;
 
-        public ChunkCoordinates(int x, int z)
+        public ChunkCoordinate(int x, int z)
         {
             X = x;
             Z = z;

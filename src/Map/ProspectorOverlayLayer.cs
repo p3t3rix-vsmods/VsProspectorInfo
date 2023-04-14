@@ -22,7 +22,7 @@ namespace ProspectorInfo.Map
         private readonly ProspectorMessages _prospectInfos;
         private readonly int _chunksize;
         private readonly ICoreClientAPI _clientApi;
-        private readonly Dictionary<ChunkCoordinates, ProspectorOverlayMapComponent> _components = new Dictionary<ChunkCoordinates, ProspectorOverlayMapComponent>();
+        private readonly Dictionary<ChunkCoordinate, ProspectorOverlayMapComponent> _components = new Dictionary<ChunkCoordinate, ProspectorOverlayMapComponent>();
         private readonly IWorldMapManager _worldMapManager;
         private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
         private bool _temporaryRenderOverride = false;
@@ -155,7 +155,7 @@ namespace ProspectorInfo.Map
             var result = new ProspectorMessages();
             foreach (var item in temp)
             {
-                result[item.ChunkCoordinates] = item;
+                result[item.ChunkCoordinate] = item;
             }
             return result;
         }
@@ -176,9 +176,9 @@ namespace ProspectorInfo.Map
             {
                 foreach (ProspectInfo info in information)
                 {
-                    _prospectInfos[info.ChunkCoordinates] = info;
-                    var newComponent = new ProspectorOverlayMapComponent(_clientApi, info.ChunkCoordinates, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
-                    _components[info.ChunkCoordinates] = newComponent;
+                    _prospectInfos[info.ChunkCoordinate] = info;
+                    var newComponent = new ProspectorOverlayMapComponent(_clientApi, info.ChunkCoordinate, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
+                    _components[info.ChunkCoordinate] = newComponent;
                     info.AddFoundOres();
                 }
                 _prospectInfos.HasChanged = true;
@@ -410,8 +410,8 @@ namespace ProspectorInfo.Map
             {
                 foreach (var info in _prospectInfos.Values)
                 {
-                    var component = new ProspectorOverlayMapComponent(_clientApi, info.ChunkCoordinates, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
-                    _components[info.ChunkCoordinates] = component;
+                    var component = new ProspectorOverlayMapComponent(_clientApi, info.ChunkCoordinate, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
+                    _components[info.ChunkCoordinate] = component;
                 }
             }
         }

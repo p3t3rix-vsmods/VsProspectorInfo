@@ -72,16 +72,16 @@ namespace ProspectorInfo.Map
         /// so we keep the coordinates in a cache.
         /// </summary>
         [Newtonsoft.Json.JsonIgnore]
-        private ChunkCoordinates? _coordinates = null;
+        private ChunkCoordinate? _coordinate = null;
         [Newtonsoft.Json.JsonIgnore]
-        public ChunkCoordinates ChunkCoordinates
+        public ChunkCoordinate ChunkCoordinate
         { 
             get {
-                if (_coordinates == null)
+                if (_coordinate == null)
                 {
-                    _coordinates = new ChunkCoordinates(X, Z);
+                    _coordinate = new ChunkCoordinate(X, Z);
                 }
-                return (ChunkCoordinates)_coordinates;
+                return (ChunkCoordinate)_coordinate;
             }
         }
 

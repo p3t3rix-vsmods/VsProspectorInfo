@@ -7,7 +7,7 @@ namespace ProspectorInfo.Map
 {
     public class ProspectorOverlayMapComponent : MapComponent
     {
-        public readonly ChunkCoordinates _chunkCoordinates;
+        public readonly ChunkCoordinate _chunkCoordinates;
         
         private readonly string _message;
         private readonly int _chunksize;
@@ -16,7 +16,7 @@ namespace ProspectorInfo.Map
         private Vec3d worldPos = new Vec3d();
         private Vec2f viewPos = new Vec2f();
 
-        public ProspectorOverlayMapComponent(ICoreClientAPI clientApi, ChunkCoordinates coords, string message, LoadedTexture colorTexture) : base(clientApi)
+        public ProspectorOverlayMapComponent(ICoreClientAPI clientApi, ChunkCoordinate coords, string message, LoadedTexture colorTexture) : base(clientApi)
         {
             this._chunkCoordinates = coords;
             this._message = message;
