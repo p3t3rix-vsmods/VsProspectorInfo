@@ -36,7 +36,7 @@ namespace ProspectorInfo.Utils
             if (!modConfig.AcceptChatSharing)
             {
                 api.ShowChatMessage("Someone shared prospecting data in chat but you currently don't accept data from the chat.<br/>" +
-                    "Use '.pi aceeptchatsharing true' to accept prospecting data in the future.");
+                    "Use '.pi acceptchatsharing true' to accept prospecting data in the future.");
                 return;
             }
 
