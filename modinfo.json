@@ -7,6 +7,6 @@
   "side": "client",
   "version": "4.1.5",
   "dependencies": {
-    "game": "1.16.0"
+    "game": "1.18.0"
   }
 }
