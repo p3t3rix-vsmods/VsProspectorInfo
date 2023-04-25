@@ -186,6 +186,7 @@ namespace ProspectorInfo.Map
             else
                 _config.RenderTexturesOnMap = (bool) args.Parsers[0].GetValue();
             _config.Save(api);
+            RebuildMap();
             return TextCommandResult.Success($"Set RenderTexturesOnMap to {_config.RenderTexturesOnMap}.");
         }
 
