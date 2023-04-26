@@ -23,11 +23,16 @@ namespace ProspectorInfo.Map
         }
     }
 
+    [ProtoBuf.ProtoContract(ImplicitFields = ProtoBuf.ImplicitFields.None)]
     internal struct OreOccurence
     {
+        [ProtoBuf.ProtoMember(1)]
         public readonly string Name;
+        [ProtoBuf.ProtoMember(2)]
         public readonly string PageCode;
+        [ProtoBuf.ProtoMember(3, IsRequired = true)]
         public readonly RelativeDensity RelativeDensity;
+        [ProtoBuf.ProtoMember(4)]
         public readonly double AbsoluteDensity;
 
         [Newtonsoft.Json.JsonConstructor]
@@ -57,9 +62,13 @@ namespace ProspectorInfo.Map
         Default,
         Heatmap
     }
+
+    [ProtoBuf.ProtoContract(ImplicitFields = ProtoBuf.ImplicitFields.None)]
     public struct ChunkCoordinate
     {
+        [ProtoBuf.ProtoMember(1)]
         public int X;
+        [ProtoBuf.ProtoMember(2)]
         public int Z;
 
         public ChunkCoordinate(int x, int z)

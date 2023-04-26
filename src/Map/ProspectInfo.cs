@@ -7,6 +7,7 @@ using Vintagestory.API.Config;
 
 namespace ProspectorInfo.Map
 {
+    [ProtoBuf.ProtoContract(ImplicitFields = ProtoBuf.ImplicitFields.None)]
     internal class ProspectInfo
     {
         public static IEnumerable<KeyValuePair<string, string>> FoundOres { get { return _allOres.Where((pair) => _foundOres.Contains(pair.Value)); } }
@@ -61,7 +62,9 @@ namespace ProspectorInfo.Map
         private static readonly Regex _absoluteDensityRegex = new Regex("([0-9]+[.,]?[0-9]*)", 
             RegexOptions.Compiled);
 
+        [ProtoBuf.ProtoMember(1)]
         public readonly int X;
+        [ProtoBuf.ProtoMember(2)]
         public readonly int Z;
 
         /// <summary>
@@ -85,6 +88,7 @@ namespace ProspectorInfo.Map
         /// <summary>
         /// A sorted list of all ore occurencies in this chunk. The ore with the highest relative density is first.
         /// </summary>
+        [ProtoBuf.ProtoMember(3)]
         public readonly List<OreOccurence> Values;
 
         /// <summary>
@@ -98,6 +102,13 @@ namespace ProspectorInfo.Map
         /// </summary>
         [Newtonsoft.Json.JsonIgnore]
         private string _messageCache;
+
+        /// <summary>
+        /// Required for ProtoBuf deserialization
+        /// </summary>
+        private ProspectInfo()
+        {
+        }
 
         [Newtonsoft.Json.JsonConstructor]
         public ProspectInfo(int x, int z, string message, List<OreOccurence> values)
@@ -113,8 +124,7 @@ namespace ProspectorInfo.Map
             } 
             else
             {
-                foreach (var val in values)
-                    _foundOres.Add(val.Name);
+                AddFoundOres();
             }            
         }
 
@@ -151,6 +161,12 @@ namespace ProspectorInfo.Map
             {
                 return (X * 397) ^ Z;
             }
+        }
+
+        public void AddFoundOres()
+        {
+            foreach (var val in Values)
+                _foundOres.Add(val.Name);
         }
 
         /// <summary>
@@ -209,8 +225,7 @@ namespace ProspectorInfo.Map
                 }
             }
 
-            foreach (var val in Values)
-                _foundOres.Add(val.Name);
+            AddFoundOres();
         }
 
         /// <summary>
@@ -280,8 +295,7 @@ namespace ProspectorInfo.Map
                 }
             }
 
-            foreach (var val in Values)
-                _foundOres.Add(val.Name);
+            AddFoundOres();
 
             Message = null;
         }
