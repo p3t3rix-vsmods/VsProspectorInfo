@@ -7,9 +7,8 @@ namespace ProspectorInfo.Map
 {
     public class ProspectorOverlayMapComponent : MapComponent
     {
-        public readonly int ChunkX;
-        public readonly int ChunkZ;
-
+        public readonly ChunkCoordinate _chunkCoordinates;
+        
         private readonly string _message;
         private readonly int _chunksize;
 
@@ -17,13 +16,12 @@ namespace ProspectorInfo.Map
         private Vec3d worldPos = new Vec3d();
         private Vec2f viewPos = new Vec2f();
 
-        public ProspectorOverlayMapComponent(ICoreClientAPI clientApi, int chunkX, int chunkZ, string message, LoadedTexture colorTexture) : base(clientApi)
+        public ProspectorOverlayMapComponent(ICoreClientAPI clientApi, ChunkCoordinate coords, string message, LoadedTexture colorTexture) : base(clientApi)
         {
-            this.ChunkX = chunkX;
-            this.ChunkZ = chunkZ;
+            this._chunkCoordinates = coords;
             this._message = message;
             this._chunksize = clientApi.World.BlockAccessor.ChunkSize;
-            this.worldPos = new Vec3d(chunkX * _chunksize, 0, chunkZ * _chunksize);
+            this.worldPos = new Vec3d(coords.X * _chunksize, 0, coords.Z * _chunksize);
             this.colorTexture = colorTexture;
         }
 
@@ -37,7 +35,7 @@ namespace ProspectorInfo.Map
 
             var chunkX = (int)(worldPos.X / _chunksize);
             var chunkZ = (int)(worldPos.Z / _chunksize);
-            if (chunkX == ChunkX && chunkZ == ChunkZ)
+            if (chunkX == _chunkCoordinates.X && chunkZ == _chunkCoordinates.Z)
             {
                 hoverText.AppendLine($"\n{_message}");
             }

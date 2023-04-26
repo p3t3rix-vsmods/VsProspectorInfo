@@ -42,7 +42,7 @@ namespace ProspectorInfo.Map
             backgroundBounds.BothSizing = ElementSizing.FitToChildren;
             backgroundBounds.WithChildren(dialogContainerBounds);
 
-            ElementBounds showOverlayTextBounds = ElementBounds.Fixed(35, 50);
+            ElementBounds showOverlayTextBounds = ElementBounds.Fixed(35, 55, 120, 40);
             ElementBounds switchBounds = ElementBounds.Fixed(125, 50);
             ElementBounds mapModeBounds = ElementBounds.Fixed(35, 100, 120, 20);
             ElementBounds oreBounds = ElementBounds.Fixed(35, 130, 120, 20);
