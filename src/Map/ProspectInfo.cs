@@ -165,6 +165,9 @@ namespace ProspectorInfo.Map
 
         public void AddFoundOres()
         {
+            if (Values == null)
+                return;
+
             foreach (var val in Values)
                 _foundOres.Add(val.Name);
         }
