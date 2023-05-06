@@ -34,18 +34,22 @@ namespace ProspectorInfo.Map
         }
         private static readonly Dictionary<string, RelativeDensity> _translatedDensities = GetDensityMappingForLang(Lang.CurrentLocale);
 
-        
+        private static Regex SanitizeRegex(string str) {
+            return new Regex(
+                str.Replace("/", "\\/")
+                   .Replace("(", "\\(")
+                   .Replace(")", "\\)")
+                   .Replace("[", "(")
+                   .Replace("]", ")"),
+                RegexOptions.Compiled);
+        }
 
         private static readonly Regex _cleanupRegex = new Regex("<.*?>", RegexOptions.Compiled);
-        private static readonly Regex _headerParsingRegex = new Regex(Lang.Get("propick-reading-title", ".*?"), RegexOptions.Compiled);
-        private static readonly Regex _readingParsingRegex = new Regex(
+        private static readonly Regex _headerParsingRegex = SanitizeRegex(
+            Lang.Get("propick-reading-title", ".*?")
+        );
+        private static readonly Regex _readingParsingRegex = SanitizeRegex(
             Lang.Get("propick-reading", "[?<relativeDensity>.*?]", "[?<pageCode>.*?]", "[?<oreName>.*?]", "[?<absoluteDensity>.*?]")
-                .Replace("/", "\\/")
-                .Replace("(", "\\(")
-                .Replace(")", "\\)")
-                .Replace("[", "(")
-                .Replace("]", ")"), 
-            RegexOptions.Compiled
         );
 
         /// <summary>
@@ -180,6 +184,14 @@ namespace ProspectorInfo.Map
         private static double ParseDoubleInvariant(string value)
         {
             return double.Parse(value.Replace(",", "."), CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Determines if <paramref name="message"/> is a prospecting info message.
+        /// </summary>
+        /// <param name="message">The prospecting string received from the server</param>
+        public static bool IsHeaderMatch(string message) {
+            return _headerParsingRegex.IsMatch(message);
         }
 
         /// <summary>

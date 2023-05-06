@@ -18,7 +18,6 @@ namespace ProspectorInfo.Map
     internal class ProspectorOverlayLayer : MapLayer
     {
         private const string Filename = ProspectorInfoModSystem.DATAFILE;
-        private readonly Regex _headerParsingRegex;
         private readonly ProspectorMessages _prospectInfos;
         private readonly int _chunksize;
         private readonly ICoreClientAPI _clientApi;
@@ -40,7 +39,6 @@ namespace ProspectorInfo.Map
             _worldMapManager = mapSink;
             _chunksize = api.World.BlockAccessor.ChunkSize;
             _prospectInfos = LoadProspectingData();
-            _headerParsingRegex = new Regex(Lang.Get("propick-reading-title", ".*?"), RegexOptions.Compiled);
 
             var modSystem = api.ModLoader.GetModSystem<ProspectorInfoModSystem>();
             _config = modSystem.Config;
@@ -375,7 +373,7 @@ namespace ProspectorInfo.Map
                 return;
 
             var pos = _clientApi.World.Player.WorldData.CurrentGameMode == EnumGameMode.Creative ? blocksSinceLastSuccessList.LastOrDefault()?.Position : blocksSinceLastSuccessList.ElementAtOrDefault(blocksSinceLastSuccessList.Count - 2 - 1)?.Position;
-            if (pos == null || groupId != GlobalConstants.InfoLogChatGroup || !_headerParsingRegex.IsMatch(message))
+            if (pos == null || groupId != GlobalConstants.InfoLogChatGroup || !ProspectInfo.IsHeaderMatch(message))
                 return;
 
             var posX = pos.X / _chunksize;
