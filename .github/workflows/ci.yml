@@ -1,7 +1,6 @@
 name: Build Mod
 
 on:
-  workflow_dispatch:
   push:
     branches: [ "master" ]
   pull_request:
@@ -19,9 +18,9 @@ jobs:
 
     - name: Setup Build Dependencies
       run: |
-        $version = $(Get-Content .\modinfo.json | jq -r .dependencies.game)
-        $filename = "vs_server_${version}.tar.gz"
-        $folder = if ($version -like "*-rc*") { "unstable" } else { "stable" }
+        $vs_version = $(Get-Content .\modinfo.json | jq -r .dependencies.game)
+        $filename = "vs_server_${vs_version}.tar.gz"
+        $folder = if ($vs_version -like "*-rc*") { "unstable" } else { "stable" }
         $uri = "https://cdn.vintagestory.at/gamefiles/${folder}/${filename}"
         Invoke-WebRequest -Uri $uri -Out $filename
         $vsdir = $(mkdir VintageStory)
@@ -31,7 +30,7 @@ jobs:
       shell: pwsh
 
     - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v1.3.1
 
     - name: Restore Mod
       run: msbuild /t:Restore /p:Configuration=Release
@@ -41,12 +40,20 @@ jobs:
       env:
         VINTAGE_STORY: ${{ env.VINTAGE_STORY }}
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: Mod
-        path: .
+    - name: Finalize Artifact
+      run: |
+        $mod_name = $(Get-Content .\modinfo.json | jq -r .version)
+        $mod_version = $(Get-Content .\modinfo.json | jq -r .version)
+        Add-Content -Path $Env:GITHUB_ENV -Value "ARTIFACT_NAME=${mod_name}-${mod_version}"
+      shell: pwsh
 
     - name: Setup tmate session
-      if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
+
+    - name: Upload Mod Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
+        path: ./bin/Release/net461/
+
+
