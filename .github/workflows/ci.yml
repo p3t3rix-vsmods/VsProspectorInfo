@@ -15,60 +15,26 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-
-    - name: Checkout VSApi
-      uses: actions/checkout@v3
-      with:
-        repository: anegostudios/vsapi
-        path: vsapi
-        fetch-depth: 0
-
-    - name: Checkout VSSurvivalMod
-      uses: actions/checkout@v3
-      with:
-        repository: anegostudios/vssurvivalmod
-        path: vssurvivalmod
-        fetch-depth: 0
-    
-    - name: Checkout VSCreativeMod
-      uses: actions/checkout@v3
-      with:
-        repository: anegostudios/vscreativemod
-        path: vscreativemod
-        fetch-depth: 0
-    
-    - name: Checkout VSEssentialsMod
-      uses: actions/checkout@v3
-      with:
-        repository: anegostudios/vsessentialsmod
-        path: vsessentialsmod
-        fetch-depth: 0
-
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1.0.2
-
-    - name: Restore Dependencies
+    - name: Setup Build Dependencies
       run: |
-        Invoke-WebRequest -Uri "https://download.visualstudio.microsoft.com/download/pr/33a48e6c-c0d1-4321-946b-042b92bad691/a9a88bd451286ab9ea015ecc2208d725/ndp461-devpack-kb3105179-enu.exe" -Out "ndp461-devpack-kb3105179-enu.exe"
-        .\ndp461-devpack-kb3105179-enu.exe /q
-        msbuild vsapi/VintagestoryAPI.csproj /t:Restore
-        msbuild vssurvivalmod/VSSurvivalMod.csproj /t:Restore
-        msbuild vscreativemod/VSCreativeMod.csproj /t:Restore
-        msbuild vsessentialsmod/VSEssentialsMod.csproj /t:Restore
-
-    - name: Build Dependencies
-      run: |
-        msbuild vsapi/VintagestoryAPI.csproj /t:Build
-        msbuild vssurvivalmod/VSSurvivalMod.csproj /t:Build
-        msbuild vscreativemod/VSCreativeMod.csproj /t:Build
-        msbuild vsessentialsmod/VSEssentialsMod.csproj /t:Restore
+        $version = $(Get-Content .\modinfo.json | jq -r .dependencies.game)
+        $filename = "vs_server_${version}.tar.gz"
+        $folder = if ($version -like "*-rc*") { "unstable" } else { "stable" }
+        $uri = "https://cdn.vintagestory.at/gamefiles/${folder}/${filename}"
+        Invoke-WebRequest -Uri $uri -Out $filename
+        $vsdir = $(mkdir VintageStory)
+        cd VintageStory
+        tar -zxvf ..\vs_server_1.18.2-rc.4.tar.gz ./Lib ./Mods
+        Add-Content -Path $Env:GITHUB_ENV -Value "VINTAGE_STORY=${vsdir.FullPath}"
+      shell: pwsh
 
     - name: Restore Mod
       run: msbuild /t:Restore /p:Configuration=Release
 
     - name: Build Mod
       run: msbuild /t:Build /p:Configuration=Release
-      shell: pwsh
+      env:
+        VINTAGE_STORY: ${{ env.VINTAGE_STORY }}
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
