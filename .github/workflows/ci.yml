@@ -1,6 +1,7 @@
 name: Build Mod
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "master" ]
   pull_request:
@@ -48,6 +49,8 @@ jobs:
 
     - name: Restore Dependencies
       run: |
+        Invoke-WebRequest -Uri "https://download.visualstudio.microsoft.com/download/pr/33a48e6c-c0d1-4321-946b-042b92bad691/a9a88bd451286ab9ea015ecc2208d725/ndp461-devpack-kb3105179-enu.exe" -Out "ndp461-devpack-kb3105179-enu.exe"
+        .\ndp461-devpack-kb3105179-enu.exe /q
         msbuild vsapi/VintagestoryAPI.csproj /t:Restore
         msbuild vssurvivalmod/VSSurvivalMod.csproj /t:Restore
         msbuild vscreativemod/VSCreativeMod.csproj /t:Restore
