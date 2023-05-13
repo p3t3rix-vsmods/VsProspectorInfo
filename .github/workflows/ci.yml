@@ -45,10 +45,8 @@ jobs:
         $mod_name = $(Get-Content .\modinfo.json | jq -r .version)
         $mod_version = $(Get-Content .\modinfo.json | jq -r .version)
         Add-Content -Path $Env:GITHUB_ENV -Value "ARTIFACT_NAME=${mod_name}-${mod_version}"
+        Remove-Item ./bin/Release/net461/VintagestoryAPI.dll  # not sure why this makes it through the filter?
       shell: pwsh
-
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
 
     - name: Upload Mod Artifact
       uses: actions/upload-artifact@v3
