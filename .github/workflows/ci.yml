@@ -15,6 +15,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
     - name: Setup Build Dependencies
       run: |
         $version = $(Get-Content .\modinfo.json | jq -r .dependencies.game)
@@ -27,6 +28,9 @@ jobs:
         tar -zxvf "..\$filename" ./Lib ./Mods
         Add-Content -Path $Env:GITHUB_ENV -Value "VINTAGE_STORY=${vsdir.FullPath}"
       shell: pwsh
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.0.2
 
     - name: Restore Mod
       run: msbuild /t:Restore /p:Configuration=Release
