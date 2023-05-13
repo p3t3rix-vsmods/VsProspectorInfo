@@ -25,7 +25,7 @@ jobs:
         Invoke-WebRequest -Uri $uri -Out $filename
         $vsdir = $(mkdir VintageStory)
         cd VintageStory
-        tar -zxvf "..\$filename" ./Lib ./Mods
+        tar -zxvf "..\$filename" Lib/ Mods/ VintagestoryAPI.dll
         Add-Content -Path $Env:GITHUB_ENV -Value "VINTAGE_STORY=${vsdir.FullPath}"
       shell: pwsh
 
