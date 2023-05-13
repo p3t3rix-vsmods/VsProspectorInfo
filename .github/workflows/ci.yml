@@ -1,4 +1,4 @@
-name: Build Mod
+name: Build VsProspectorInfo
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1.3.1
 
-    - name: Restore Mod
+    - name: Restore Mod Dependencies
       run: msbuild /t:Restore /p:Configuration=Release
 
     - name: Build Mod
@@ -42,7 +42,7 @@ jobs:
 
     - name: Finalize Artifact
       run: |
-        $mod_name = $(Get-Content .\modinfo.json | jq -r .version)
+        $mod_name = $(Get-Content .\modinfo.json | jq -r .name)
         $mod_version = $(Get-Content .\modinfo.json | jq -r .version)
         Add-Content -Path $Env:GITHUB_ENV -Value "ARTIFACT_NAME=${mod_name}-${mod_version}"
         Remove-Item ./bin/Release/net461/VintagestoryAPI.dll  # not sure why this makes it through the filter?
