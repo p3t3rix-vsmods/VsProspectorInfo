@@ -17,8 +17,6 @@ Just drop the file into your mods folder. You just need this mod on the client, 
         No argument resets the heatmap back to all ores. Can only handle the ore name in your selected language or the ore tag.
         Examples: game:ore-emerald, game:ore-bituminouscoal, Cassiterite.
     .pi setsaveintervalminutes [1-60] - Periodically store the prospecting data every x minutes.
-    .pi share - Share your prospecting data via the chat. Clients with this mod will update their own data based on the new information.
-    .pi acceptchatsharing [true,false] - Accept prospecting data from the chat.
 
 Each command updates the respective configuration option.
 
@@ -35,15 +33,16 @@ Each command updates the respective configuration option.
     HeatMapOre [oreName] - The ore selected for the heatmap.
     MapMode [0-1] - The mode of the map.
     SaveIntervalMinutes [1-60] - Periodically store the prospecting data every x minutes. Default: 1
-    AcceptChatSharing [bool] - Accept prospecting data shared by other players in the chat? Default: false
 
 ## Usage
 
-Whenever you finish prospecting a chunk, the data is saved into the ModData folder and added to the chunk info of the world map. This is just a 1:1 parsing of the chat message that the prospecting pick sends. 
+Whenever you finish prospecting a chunk, the data is saved into the ModData folder and added to the chunk info of the world map. 
+
+The data is stored on the server that hosts the game (or locally in case of single player) and shared with all participating clients.
 
 The mod renders a transparent square of all chunks that have been prospected. If a chunk is re-prospected, the message is simply overwritten. The rendering of these squares can be toggled with the .pi command.
 
-After prospecting, the info will be displayed in the tooltip of the minimap when hovering over the chunk. This info is stored in %Vintage_Story_Data%/ModData/YourWorldId/vsprospectorinfo.data and is client side only.
+After prospecting, the info will be displayed in the tooltip of the minimap when hovering over the chunk. This info is stored in %Vintage_Story_Data%/ModData/YourWorldId/vsprospectorinfo.data.json
 
 ![image](https://user-images.githubusercontent.com/5238284/79952656-09e3f680-847b-11ea-96c9-b4cb9b47355f.png)
 
