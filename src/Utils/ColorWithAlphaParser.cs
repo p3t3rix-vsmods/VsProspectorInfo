@@ -1,20 +1,16 @@
 ﻿using ProspectorInfo.Models;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Vintagestory.API.Common;
 
 namespace ProspectorInfo.Utils
 {
-    public class ColorWithAlphaUpdate 
+    public class ColorWithAlphaUpdate
     {
 
-        private byte? red; 
-        private byte? green; 
-        private byte? blue; 
-        private byte? alpha;
+        private readonly byte? red;
+        private readonly byte? green;
+        private readonly byte? blue;
+        private readonly byte? alpha;
 
         public ColorWithAlphaUpdate(byte? r, byte? g, byte? b, byte? a)
         {
@@ -24,7 +20,7 @@ namespace ProspectorInfo.Utils
             alpha = a;
         }
 
-        public void ApplyUpdateTo(ColorWithAlpha other) 
+        public void ApplyUpdateTo(ColorWithAlpha other)
         {
             other.Red = red ?? other.Red;
             other.Green = green ?? other.Green;
@@ -32,7 +28,7 @@ namespace ProspectorInfo.Utils
             other.Alpha = alpha ?? other.Alpha;
         }
     }
-    
+
     public class ColorWithAlphaArgParser : ArgumentParserBase
     {
         private ColorWithAlphaUpdate value = new ColorWithAlphaUpdate(null, null, null, null);
@@ -48,7 +44,7 @@ namespace ProspectorInfo.Utils
 
         public override void SetValue(object data)
         {
-            value = (ColorWithAlphaUpdate) data;
+            value = (ColorWithAlphaUpdate)data;
         }
 
         public override EnumParseResult TryProcess(TextCommandCallingArgs args, Action<AsyncParseResults> onReady = null)
@@ -56,7 +52,7 @@ namespace ProspectorInfo.Utils
             // TODO: In theory this is bad design, because this parser consumes a variable amount of arguments,
             // so we might 'steal' arguments from a subsequent parser, even though they are not meant for this parser. 
             // In other words, this parser should always be last.
-            
+
             int argCount = args.RawArgs.Length;
             if (!(argCount == 1 || argCount == 3 || argCount == 4))
             {
@@ -70,15 +66,15 @@ namespace ProspectorInfo.Utils
                 var arg = args.RawArgs.PopInt();
                 if (arg == null)
                 {
-                    lastErrorMessage = $"Color component {i+1} is not a number.";
+                    lastErrorMessage = $"Color component {i + 1} is not a number.";
                     return EnumParseResult.Bad;
                 }
                 if (arg < 0 || arg > 255)
                 {
-                    lastErrorMessage = $"Color component {i+1} must be in range [0-255].";
+                    lastErrorMessage = $"Color component {i + 1} must be in range [0-255].";
                     return EnumParseResult.Bad;
                 }
-                values[i] = (byte) arg.Value;
+                values[i] = (byte)arg.Value;
             }
 
             if (values.Length == 1)

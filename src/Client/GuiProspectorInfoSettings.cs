@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using ProspectorInfo.Models;
+using ProspectorInfo.Utils;
+using Storage;
 using Vintagestory.API.Client;
 
 namespace ProspectorInfo.Map
@@ -11,25 +14,30 @@ namespace ProspectorInfo.Map
         private readonly ModConfig _config;
         private readonly Action<bool> _rebuildMap;
         private List<KeyValuePair<string, string>> _ores;
+        private readonly ProspectingDataStorage _storage;
 
-        public GuiProspectorInfoSetting(ICoreClientAPI capi, ModConfig config, Action<bool> rebuildMap) : base(capi)
+        public GuiProspectorInfoSetting(ICoreClientAPI capi, ModConfig config, Action<bool> rebuildMap, ProspectingDataStorage storage) : base(capi)
         {
+            _storage = storage;
             _config = config;
             _rebuildMap = rebuildMap;
-            _ores = ProspectInfo.FoundOres.OrderBy((pair) => pair.Key).ToList();
+            _ores = new List<KeyValuePair<string, string>>();
             _ores.Insert(0, new KeyValuePair<string, string>("All ores", null));
             SetupDialog();
         }
 
         public override bool TryOpen()
         {
-            if (_ores.Count != ProspectInfo.FoundOres.Count() + 1)
+            lock (_storage.Lock)
             {
-                _ores = ProspectInfo.FoundOres.OrderBy((pair) => pair.Key).ToList();
-                _ores.Insert(0, new KeyValuePair<string, string>("All ores", null));
-                SetupDialog();
+                if (_ores.Count != _storage.FoundOres.Count() + 1)
+                {
+                    _ores = _storage.FoundOres.OrderBy((pair) => pair.Key).ToList();
+                    _ores.Insert(0, new KeyValuePair<string, string>("All ores", null));
+                    SetupDialog();
+                }
             }
-            
+
             return base.TryOpen();
         }
 

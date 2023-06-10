@@ -3,8 +3,8 @@
   "modid": "prospectorinfo",
   "name": "ProspectorInfo",
   "author": "P3t3rix",
+  "side" : "Universal",
   "description": "Adds info to the tooltip for chunks that are already prospected",
-  "side": "client",
   "version": "4.3.0",
   "dependencies": {
     "game": "1.18.2"
