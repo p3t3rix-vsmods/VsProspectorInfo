@@ -1,0 +1,167 @@
+﻿using Foundation.Extensions;
+using Foundation.ModConfig;
+using HarmonyLib;
+using Newtonsoft.Json.Linq;
+using ProspectTogether.Client;
+using ProspectTogether.Server;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using Vintagestory.API.Client;
+using Vintagestory.API.Common;
+using Vintagestory.API.Config;
+using Vintagestory.API.Server;
+using Vintagestory.GameContent;
+
+namespace ProspectTogether
+{
+    public class ProspectTogetherModSystem : ModSystem
+    {
+        // Old file name from ProspectorInfo
+        private const string PROSPECTOR_INFO_FILE_NAME = "vsprospectorinfo.data.json";
+
+
+        private const string Name = "prospectTogether";
+
+        public const string CLIENT_DATAFILE = "prospectTogetherClient.json";
+        public ClientModConfig ClientConfig;
+        public ClientStorage ClientStorage;
+        public ICoreClientAPI ClientApi;
+
+
+        public const string SERVER_DATAFILE = "prospectTogetherServer.json";
+        public ServerModConfig ServerConfig;
+        public ServerStorage ServerStorage;
+        public ICoreServerAPI ServerApi;
+
+        public override void StartClientSide(ICoreClientAPI api)
+        {
+            ClientApi = api;
+            ClientConfig = api.LoadOrCreateConfig<ClientModConfig>(this);
+
+            MigrateDataFileFromProspectorInfo(api);
+            MigrationSerializationFormatToV1(CLIENT_DATAFILE, api);
+
+            ClientStorage = new ClientStorage(api, ClientConfig, CLIENT_DATAFILE);
+            ClientStorage.StartClientSide();
+            var mapManager = api.ModLoader.GetModSystem<WorldMapManager>();
+            mapManager.RegisterMapLayer<ProspectorOverlayLayer>(Name);
+        }
+
+        public override void StartServerSide(ICoreServerAPI api)
+        {
+            ServerApi = api;
+            ServerConfig = api.LoadOrCreateConfig<ServerModConfig>(this);
+            MigrationSerializationFormatToV1(SERVER_DATAFILE, api);
+
+            ServerStorage = new ServerStorage(api, ServerConfig, SERVER_DATAFILE);
+            ServerStorage.StartServerSide();
+
+            api.ChatCommands.Create("pt")
+                    .WithDescription("ProspectTogether server main command.")
+                    .RequiresPrivilege(Privilege.root)
+                    .BeginSubCommand("setsaveintervalminutes")
+                        .WithDescription(".pt setsaveintervalminutes [int] - How often should the prospecting data be saved to disk.<br/>" +
+                                         "The data is also saved when leaving a world.<br/>" +
+                                         "Sets the \"SaveIntervalMinutes\" config option (default = 1)")
+                        .WithArgs(api.ChatCommands.Parsers.IntRange("interval", 1, 60))
+                        .RequiresPrivilege(Privilege.root)
+                        .HandleWith(OnSetSaveIntervalMinutes)
+                    .EndSubCommand();
+        }
+
+        private TextCommandResult OnSetSaveIntervalMinutes(TextCommandCallingArgs args)
+        {
+            ServerConfig.SaveIntervalMinutes = (int)args.Parsers[0].GetValue();
+            ServerConfig.Save(ServerApi);
+            ServerStorage.ConfigureSaveListener();
+            return TextCommandResult.Success($"Set Server SaveIntervalMinutes to {ServerConfig.SaveIntervalMinutes}.");
+        }
+
+        private void MigrateDataFileFromProspectorInfo(ICoreClientAPI api)
+        {
+            var oldPath = Path.Combine(GamePaths.DataPath, "ModData", api.GetWorldId(), PROSPECTOR_INFO_FILE_NAME);
+            if (!File.Exists(oldPath))
+            {
+                return;
+            }
+
+            var newPath = Path.Combine(GamePaths.DataPath, "ModData", api.GetWorldId(), CLIENT_DATAFILE);
+            if (File.Exists(newPath))
+            {
+                return;
+            }
+            File.Copy(oldPath, newPath, false);
+        }
+
+        private void MigrationSerializationFormatToV1(string filename, ICoreAPI api)
+        {
+            // Try to migrate old stored data
+            var dataPath = Path.Combine(GamePaths.DataPath, "ModData", api.GetWorldId(), filename);
+            if (!File.Exists(dataPath))
+            {
+                return;
+            }
+            try
+            {
+                var content = File.ReadAllText(dataPath);
+
+                var result = JToken.Parse(content);
+                if (!(result is JArray))
+                {
+                    return;
+                }
+                JArray rootArray = result as JArray;
+
+                // Remove entries that could not be parsed in the past.
+                List<JObject> toDelete = new List<JObject>();
+                foreach (JObject item in rootArray.Cast<JObject>())
+                {
+                    if (item["Values"].Type == JTokenType.Null)
+                    {
+                        toDelete.Add(item);
+                    }
+                }
+                foreach (JObject item in toDelete)
+                {
+                    rootArray.Remove(item);
+                }
+
+                // Remove old values and group X and Z into chunk.
+                foreach (JObject entry in rootArray.Cast<JObject>())
+                {
+                    JObject chunk = new JObject
+                {
+                    { "X", entry["X"] },
+                    { "Z", entry["Z"] }
+                };
+                    entry.Add("Chunk", chunk);
+                    entry.Remove("Message");
+                    entry.Remove("X");
+                    entry.Remove("Z");
+                }
+
+                // Add version header
+                JObject newRoot = new JObject();
+                newRoot["Version"] = new JValue(1);
+                newRoot["ProspectInfos"] = rootArray;
+
+                File.WriteAllText(dataPath, newRoot.ToString(Newtonsoft.Json.Formatting.None));
+            }
+            catch (Exception e)
+            {
+                api.World.Logger.Error($"Failed to migrate prospecting data file at '{dataPath}', with an error of '{e}'! Either delete that file or check what is causing the problem.");
+                throw e;
+            }
+        }
+
+        public override void Start(ICoreAPI api)
+        {
+            var prospectTogetherPatches = new Harmony("ProspectTogether.patches");
+            prospectTogetherPatches.PatchAll(Assembly.GetExecutingAssembly());
+        }
+
+    }
+}

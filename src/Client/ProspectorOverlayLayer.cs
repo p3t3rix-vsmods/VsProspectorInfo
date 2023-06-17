@@ -1,77 +1,74 @@
-﻿using System;
+﻿using HarmonyLib;
+using ProspectTogether.Shared;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using HarmonyLib;
-using ProspectorInfo.Models;
-using ProspectorInfo.Utils;
-using Storage;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
-namespace ProspectorInfo.Map
+namespace ProspectTogether.Client
 {
     internal class ProspectorOverlayLayer : MapLayer
     {
-        private readonly int _chunksize;
-        private readonly ProspectingDataStorage _storage;
-        private readonly ICoreClientAPI _clientApi;
+        private readonly int Chunksize;
+        private readonly ClientStorage Storage;
+        private readonly ICoreClientAPI ClientApi;
         private readonly Dictionary<ChunkCoordinate, ProspectorOverlayMapComponent> _components = new Dictionary<ChunkCoordinate, ProspectorOverlayMapComponent>();
-        private readonly IWorldMapManager _worldMapManager;
-        private readonly LoadedTexture[] _colorTextures = new LoadedTexture[8];
-        private bool _temporaryRenderOverride = false;
-        private static ModConfig _config;
-        private static GuiDialog _settingsDialog;
+        private readonly IWorldMapManager WorldMapManager;
+        private readonly LoadedTexture[] ColorTextures = new LoadedTexture[8];
+        private bool TemporaryRenderOverride = false;
+        private static ClientModConfig Config;
+        private static GuiDialog SettingsDialog;
 
         public override string Title => "ProspectorOverlay";
         public override EnumMapAppSide DataSide => EnumMapAppSide.Client;
 
         public ProspectorOverlayLayer(ICoreAPI api, IWorldMapManager mapSink) : base(api, mapSink)
         {
-            _worldMapManager = mapSink;
-            _chunksize = api.World.BlockAccessor.ChunkSize;
+            WorldMapManager = mapSink;
+            Chunksize = api.World.BlockAccessor.ChunkSize;
 
-            var modSystem = api.ModLoader.GetModSystem<ProspectorInfoModSystem>();
-            _config = modSystem.Config;
-            _storage = modSystem.Storage;
-            _storage.OnChanged += UpdateMapComponents;
+            var modSystem = api.ModLoader.GetModSystem<ProspectTogetherModSystem>();
+            Config = modSystem.ClientConfig;
+            Storage = modSystem.ClientStorage;
+            Storage.OnChanged += UpdateMapComponents;
 
             if (api.Side == EnumAppSide.Client)
             {
-                _clientApi = (ICoreClientAPI)api;
-                _clientApi.Event.AfterActiveSlotChanged += Event_AfterActiveSlotChanged;
-                _clientApi.Event.PlayerJoin += (p) =>
+                ClientApi = (ICoreClientAPI)api;
+                ClientApi.Event.AfterActiveSlotChanged += Event_AfterActiveSlotChanged;
+                ClientApi.Event.PlayerJoin += (p) =>
                 {
-                    if (p == _clientApi?.World.Player)
+                    if (p == ClientApi?.World.Player)
                     {
                         var invMan = p?.InventoryManager?.GetHotbarInventory();
                         invMan.SlotModified += Event_SlotModified;
                     }
                 };
 
-                _clientApi.ChatCommands.Create("pi")
-                    .WithDescription("ProspectorInfo main command. Defaults to toggling the map overlay.")
+                ClientApi.ChatCommands.Create("pt")
+                    .WithDescription("ProspectorTogether main command. Defaults to toggling the map overlay.")
                     .HandleWith(OnShowOverlayCommand)
                     .BeginSubCommand("showoverlay")
-                        .WithDescription(".pi showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.")
+                        .WithDescription(".pt showoverlay [bool] - Shows or hides the overlay. No argument toggles instead.")
                         .WithArgs(api.ChatCommands.Parsers.OptionalBool("show"))
                         .HandleWith(OnShowOverlayCommand)
                     .EndSubCommand()
                     .BeginSubCommand("showgui")
-                        .WithDescription(".pi showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.")
+                        .WithDescription(".pt showgui [bool] - Shows or hides the gui whenever the map is open. No argument toggles instead.")
                         .WithArgs(api.ChatCommands.Parsers.OptionalBool("show"))
                         .HandleWith(OnShowGuiCommand)
                     .EndSubCommand()
                     .BeginSubCommand("showborder")
-                        .WithDescription(".pi showborder [bool] - Shows or hides the tile border. No argument toggles instead.<br/>" +
+                        .WithDescription(".pt showborder [bool] - Shows or hides the tile border. No argument toggles instead.<br/>" +
                                          "Sets the \"RenderBorder\" config option (default = true)")
                         .WithArgs(api.ChatCommands.Parsers.OptionalBool("show"))
                         .HandleWith(OnShowBorderCommand)
                     .EndSubCommand()
                     .BeginSubCommand("setcolor")
-                        .WithDescription(".pi setcolor (overlay|border|lowheat|highheat) [0-255] [0-255] [0-255] [0-255]<br/>" +
+                        .WithDescription(".pt setcolor (overlay|border|lowheat|highheat) [0-255] [0-255] [0-255] [0-255]<br/>" +
                                          "Sets the given color for the specified element.<br/>" +
                                          "You can specify a color either as RGBA, RGB or only A.<br/>" +
                                          "The lowheat and highheat colors will be blended on the heatmap based on relative density.<br/>" +
@@ -91,33 +88,35 @@ namespace ProspectorInfo.Map
                         .HandleWith(OnSetBorderThicknessCommand)
                     .EndSubCommand()
                     .BeginSubCommand("mode")
-                        .WithDescription(".pi mode [0-1] - Sets the map mode<br/>" +
+                        .WithDescription(".pt mode [0-1] - Sets the map mode<br/>" +
                                          "Supported modes: 0 (Default) and 1 (Heatmap)")
                         .WithArgs(api.ChatCommands.Parsers.IntRange("mode", 0, 1))
                         .HandleWith(OnSetModeCommand)
                     .EndSubCommand()
                     .BeginSubCommand("heatmapore")
-                        .WithDescription(".pi heatmapore [oreName] - Changes the heatmap mode to display a specific ore<br/>" +
+                        .WithDescription(".pt heatmapore [oreName] - Changes the heatmap mode to display a specific ore<br/>" +
                                          "No argument resets the heatmap back to all ores. Can only handle the ore name in your selected language or the ore tag.<br/>" +
                                          "E.g. game:ore-emerald, game:ore-bituminouscoal, Cassiterite")
                         .WithArgs(api.ChatCommands.Parsers.OptionalWord("oreName"))
                         .HandleWith(OnHeatmapOreCommand)
                     .EndSubCommand()
-                    .BeginSubCommand("setsaveintervalminutes")
-                        .WithDescription(".pi setsaveintervalminutes [int] - How often should the prospecting data be saved to disk.<br/>" +
-                                         "Requires leaving/reentering the world. The data is also saved when leaving a world.<br/>" +
-                                         "Sets the \"SaveIntervalMinutes\" config option (default = 1)")
-                        .WithArgs(api.ChatCommands.Parsers.IntRange("interval", 1, 60))
-                        .HandleWith(OnSetSaveIntervalMinutes)
+                    .BeginSubCommand("autoshare")
+                        .WithDescription(".pt autoshare [bool] - Automatically share prospecting data")
+                        .WithArgs(api.ChatCommands.Parsers.OptionalBool("autoshare"))
+                        .HandleWith(OnSetAutoShare)
+                    .EndSubCommand()
+                    .BeginSubCommand("sendall")
+                        .WithDescription(".pt sendall - Send all prospecting data to the server.")
+                        .HandleWith(OnSendAll)
                     .EndSubCommand();
 
-                for (int i = 0; i < _colorTextures.Length; i++)
+                for (int i = 0; i < ColorTextures.Length; i++)
                 {
-                    _colorTextures[i]?.Dispose();
-                    _colorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
+                    ColorTextures[i]?.Dispose();
+                    ColorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
                 }
 
-                _settingsDialog = new GuiProspectorInfoSetting(_clientApi, _config, RebuildMap, _storage);
+                SettingsDialog = new ProspectTogetherSettingsDialog(ClientApi, Config, RebuildMap, Storage);
             }
         }
 
@@ -128,7 +127,7 @@ namespace ProspectorInfo.Map
         {
             foreach (ProspectInfo info in information)
             {
-                var newComponent = new ProspectorOverlayMapComponent(_clientApi, info.Chunk, info.GetMessage(), _colorTextures[(int)GetRelativeDensity(info)]);
+                var newComponent = new ProspectorOverlayMapComponent(ClientApi, info.Chunk, info.GetMessage(), ColorTextures[(int)GetRelativeDensity(info)]);
                 _components[info.Chunk] = newComponent;
             }
         }
@@ -140,24 +139,24 @@ namespace ProspectorInfo.Map
         {
             // Parser count is 0 when only calling .pi command.
             if (args.Parsers.Count == 0 || args.Parsers[0].IsMissing)
-                _config.RenderTexturesOnMap = !_config.RenderTexturesOnMap;
+                Config.RenderTexturesOnMap = !Config.RenderTexturesOnMap;
             else
-                _config.RenderTexturesOnMap = (bool)args.Parsers[0].GetValue();
-            _config.Save(api);
+                Config.RenderTexturesOnMap = (bool)args.Parsers[0].GetValue();
+            Config.Save(api);
             RebuildMap();
-            return TextCommandResult.Success($"Set RenderTexturesOnMap to {_config.RenderTexturesOnMap}.");
+            return TextCommandResult.Success($"Set RenderTexturesOnMap to {Config.RenderTexturesOnMap}.");
         }
 
         private TextCommandResult OnShowGuiCommand(TextCommandCallingArgs args)
         {
             if (args.Parsers[0].IsMissing)
-                _config.ShowGui = !_config.ShowGui;
+                Config.ShowGui = !Config.ShowGui;
             else
-                _config.ShowGui = (bool)args.Parsers[0].GetValue();
-            _config.Save(api);
-            if (_worldMapManager.IsOpened)
-                _settingsDialog.TryOpen();
-            return TextCommandResult.Success($"Set ShowGui to {_config.ShowGui}.");
+                Config.ShowGui = (bool)args.Parsers[0].GetValue();
+            Config.Save(api);
+            if (WorldMapManager.IsOpened)
+                SettingsDialog.TryOpen();
+            return TextCommandResult.Success($"Set ShowGui to {Config.ShowGui}.");
         }
 
         private TextCommandResult OnSetColorCommand(TextCommandCallingArgs args)
@@ -167,25 +166,25 @@ namespace ProspectorInfo.Map
             switch ((string)args.Parsers[0].GetValue())
             {
                 case "overlay":
-                    colorUpdate.ApplyUpdateTo(_config.TextureColor);
+                    colorUpdate.ApplyUpdateTo(Config.TextureColor);
                     changedColorSetting = "TextureColor";
                     break;
                 case "border":
-                    colorUpdate.ApplyUpdateTo(_config.BorderColor);
+                    colorUpdate.ApplyUpdateTo(Config.BorderColor);
                     changedColorSetting = "BorderColor";
                     break;
                 case "lowheat":
-                    colorUpdate.ApplyUpdateTo(_config.LowHeatColor);
+                    colorUpdate.ApplyUpdateTo(Config.LowHeatColor);
                     changedColorSetting = "LowHeadColor";
                     break;
                 case "highheat":
-                    colorUpdate.ApplyUpdateTo(_config.HighHeatColor);
+                    colorUpdate.ApplyUpdateTo(Config.HighHeatColor);
                     changedColorSetting = "HighHeatColor";
                     break;
                 default:
                     return TextCommandResult.Error("Unknown element to set color for.");
             }
-            _config.Save(api);
+            Config.Save(api);
             RebuildMap(true);
             return TextCommandResult.Success($"Updated color for {changedColorSetting}.");
         }
@@ -193,51 +192,60 @@ namespace ProspectorInfo.Map
         private TextCommandResult OnSetBorderThicknessCommand(TextCommandCallingArgs args)
         {
             var newThickness = (int)args.Parsers[0].GetValue();
-            _config.BorderThickness = newThickness;
-            _config.Save(api);
+            Config.BorderThickness = newThickness;
+            Config.Save(api);
             RebuildMap(true);
-            return TextCommandResult.Success($"Set BorderThickness to {_config.BorderThickness}.");
+            return TextCommandResult.Success($"Set BorderThickness to {Config.BorderThickness}.");
         }
 
         private TextCommandResult OnShowBorderCommand(TextCommandCallingArgs args)
         {
             if (args.Parsers[0].IsMissing)
-                _config.RenderBorder = !_config.RenderBorder;
+                Config.RenderBorder = !Config.RenderBorder;
             else
-                _config.RenderBorder = (bool)args.Parsers[0].GetValue();
-            _config.Save(api);
+                Config.RenderBorder = (bool)args.Parsers[0].GetValue();
+            Config.Save(api);
 
             RebuildMap(true);
-            return TextCommandResult.Success($"Set RenderBorder to {_config.RenderBorder}.");
+            return TextCommandResult.Success($"Set RenderBorder to {Config.RenderBorder}.");
         }
 
         private TextCommandResult OnSetModeCommand(TextCommandCallingArgs args)
         {
             var newMode = (int)args.Parsers[0].GetValue();
-            _config.MapMode = (MapMode)newMode;
-            _config.Save(api);
+            Config.MapMode = (MapMode)newMode;
+            Config.Save(api);
 
             RebuildMap(true);
-            return TextCommandResult.Success($"Set MapMode to {_config.MapMode}.");
+            return TextCommandResult.Success($"Set MapMode to {Config.MapMode}.");
         }
 
         private TextCommandResult OnHeatmapOreCommand(TextCommandCallingArgs args)
         {
             if (args.Parsers[0].IsMissing)
-                _config.HeatMapOre = null;
+                Config.HeatMapOre = null;
             else
-                _config.HeatMapOre = (string)args.Parsers[0].GetValue();
-            _config.Save(api);
+                Config.HeatMapOre = (string)args.Parsers[0].GetValue();
+            Config.Save(api);
 
             RebuildMap(true);
-            return TextCommandResult.Success($"Set HeatMapOre to {_config.HeatMapOre}.");
+            return TextCommandResult.Success($"Set HeatMapOre to {Config.HeatMapOre}.");
         }
 
-        private TextCommandResult OnSetSaveIntervalMinutes(TextCommandCallingArgs args)
+        private TextCommandResult OnSetAutoShare(TextCommandCallingArgs args)
         {
-            _config.SaveIntervalMinutes = (int)args.Parsers[0].GetValue();
-            _config.Save(api);
-            return TextCommandResult.Success($"Set SaveIntervalMinutes to {_config.SaveIntervalMinutes}.");
+            if (args.Parsers[0].IsMissing)
+                Config.AutoShare = !Config.AutoShare;
+            else
+                Config.AutoShare = (bool)args.Parsers[0].GetValue();
+            Config.Save(api);
+            return TextCommandResult.Success($"Set AutoShare to {Config.AutoShare}.");
+        }
+
+        private TextCommandResult OnSendAll(TextCommandCallingArgs args)
+        {
+            Storage.SendAll();
+            return TextCommandResult.Success($"Sent all prospecting data to server.");
         }
 
         private void Event_SlotModified(int slotId)
@@ -251,13 +259,13 @@ namespace ProspectorInfo.Map
 
         private void UpdateRenderOverride()
         {
-            if (!_config.AutoToggle)
+            if (!Config.AutoToggle)
                 return;
 
-            _temporaryRenderOverride = ProspectingPickInHand;
+            TemporaryRenderOverride = ProspectingPickInHand;
         }
 
-        private bool ProspectingPickInHand => _clientApi?.World?.Player?.InventoryManager?.ActiveHotbarSlot?.Itemstack?.Item?.Code?
+        private bool ProspectingPickInHand => ClientApi?.World?.Player?.InventoryManager?.ActiveHotbarSlot?.Itemstack?.Item?.Code?
                 .FirstPathPart()?.ToLower().StartsWith("prospectingpick") ?? false;
 
         #endregion
@@ -265,42 +273,42 @@ namespace ProspectorInfo.Map
         #region Texture
         private LoadedTexture GenerateOverlayTexture(RelativeDensity? relativeDensity)
         {
-            var colorTexture = new LoadedTexture(_clientApi, 0, _chunksize, _chunksize);
+            var colorTexture = new LoadedTexture(ClientApi, 0, Chunksize, Chunksize);
             int[] colorArray;
-            if (_config.MapMode == MapMode.Heatmap)
-                colorArray = Enumerable.Repeat(ColorUtil.ColorOverlay(_config.LowHeatColor.RGBA, _config.HighHeatColor.RGBA, 1 * (int)relativeDensity / 8.0f), _chunksize * _chunksize).ToArray();
+            if (Config.MapMode == MapMode.Heatmap)
+                colorArray = Enumerable.Repeat(ColorUtil.ColorOverlay(Config.LowHeatColor.RGBA, Config.HighHeatColor.RGBA, 1 * (int)relativeDensity / 8.0f), Chunksize * Chunksize).ToArray();
             else
-                colorArray = Enumerable.Repeat(_config.TextureColor.RGBA, _chunksize * _chunksize).ToArray();
+                colorArray = Enumerable.Repeat(Config.TextureColor.RGBA, Chunksize * Chunksize).ToArray();
 
-            if (_config.RenderBorder)
+            if (Config.RenderBorder)
             {
-                for (int x = 0; x < _chunksize; x++)
+                for (int x = 0; x < Chunksize; x++)
                 {
-                    for (int y = 0; y < _chunksize; y++)
+                    for (int y = 0; y < Chunksize; y++)
                     {
-                        if (x < _config.BorderThickness || x > _chunksize - 1 - _config.BorderThickness)
-                            colorArray[y * _chunksize + x] = ColorUtil.ColorOver(colorArray[y * _chunksize + x], _config.BorderColor.RGBA);
-                        else if (y < _config.BorderThickness || y > _chunksize - 1 - _config.BorderThickness)
-                            colorArray[y * _chunksize + x] = ColorUtil.ColorOver(colorArray[y * _chunksize + x], _config.BorderColor.RGBA);
+                        if (x < Config.BorderThickness || x > Chunksize - 1 - Config.BorderThickness)
+                            colorArray[y * Chunksize + x] = ColorUtil.ColorOver(colorArray[y * Chunksize + x], Config.BorderColor.RGBA);
+                        else if (y < Config.BorderThickness || y > Chunksize - 1 - Config.BorderThickness)
+                            colorArray[y * Chunksize + x] = ColorUtil.ColorOver(colorArray[y * Chunksize + x], Config.BorderColor.RGBA);
                     }
                 }
             }
 
-            _clientApi.Render.LoadOrUpdateTextureFromRgba(colorArray, false, 0, ref colorTexture);
-            _clientApi.Render.BindTexture2d(colorTexture.TextureId);
+            ClientApi.Render.LoadOrUpdateTextureFromRgba(colorArray, false, 0, ref colorTexture);
+            ClientApi.Render.BindTexture2d(colorTexture.TextureId);
 
             return colorTexture;
         }
 
         public bool UserDisabledMapTextures()
         {
-            return !_config.RenderTexturesOnMap;
+            return !Config.RenderTexturesOnMap;
         }
         #endregion
 
         public override void OnMapOpenedClient()
         {
-            if (!_worldMapManager.IsOpened)
+            if (!WorldMapManager.IsOpened)
                 return;
 
             RebuildMap();
@@ -311,34 +319,34 @@ namespace ProspectorInfo.Map
 
             if (rebuildTexture)
             {
-                for (int i = 0; i < _colorTextures.Length; i++)
+                for (int i = 0; i < ColorTextures.Length; i++)
                 {
-                    _colorTextures[i]?.Dispose();
-                    _colorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
+                    ColorTextures[i]?.Dispose();
+                    ColorTextures[i] = GenerateOverlayTexture((RelativeDensity)i);
                 }
             }
 
-            lock (_storage.Lock)
+            lock (Storage.Lock)
             {
                 _components.Clear();
-                UpdateMapComponents(_storage.Data.Values);
+                UpdateMapComponents(Storage.Data.Values);
             }
         }
 
         private RelativeDensity GetRelativeDensity(ProspectInfo prospectInfo)
         {
-            if (_config.HeatMapOre == null)
+            if (Config.HeatMapOre == null)
                 if (prospectInfo.Values != null && prospectInfo.Values.Count > 0)
                     return prospectInfo.Values.First().RelativeDensity;
                 else
                     return RelativeDensity.Zero;
             else
-                return prospectInfo.GetValueOfOre(_config.HeatMapOre);
+                return prospectInfo.GetValueOfOre(Config.HeatMapOre);
         }
 
         public override void OnMouseMoveClient(MouseEvent args, GuiElementMap mapElem, StringBuilder hoverText)
         {
-            lock (_storage.Lock)
+            lock (Storage.Lock)
             {
                 foreach (var component in _components.Values)
                 {
@@ -349,10 +357,10 @@ namespace ProspectorInfo.Map
 
         public override void Render(GuiElementMap mapElem, float dt)
         {
-            if (!_temporaryRenderOverride && UserDisabledMapTextures())
+            if (!TemporaryRenderOverride && UserDisabledMapTextures())
                 return;
 
-            lock (_storage.Lock)
+            lock (Storage.Lock)
             {
                 foreach (var component in _components.Values)
                 {
@@ -363,7 +371,7 @@ namespace ProspectorInfo.Map
 
         public override void Dispose()
         {
-            foreach (var texture in _colorTextures)
+            foreach (var texture in ColorTextures)
             {
                 texture?.Dispose();
             }
@@ -375,7 +383,7 @@ namespace ProspectorInfo.Map
         {
             static void Postfix()
             {
-                _settingsDialog.TryClose();
+                SettingsDialog.TryClose();
             }
         }
 
@@ -384,10 +392,10 @@ namespace ProspectorInfo.Map
         {
             static void Postfix(EnumDialogType type)
             {
-                if (_config.ShowGui && type == EnumDialogType.Dialog)
-                    _settingsDialog.TryOpen();
+                if (Config.ShowGui && type == EnumDialogType.Dialog)
+                    SettingsDialog.TryOpen();
                 else
-                    _settingsDialog.TryClose();
+                    SettingsDialog.TryClose();
             }
         }
 

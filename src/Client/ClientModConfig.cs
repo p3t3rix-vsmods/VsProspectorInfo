@@ -1,13 +1,18 @@
-﻿using Foundation.ModConfig;
-using ProspectorInfo.Map;
-using ProspectorInfo.Models;
-using ProspectorInfo.Utils;
+﻿using ProspectTogether.Shared;
 
-namespace ProspectorInfo
+namespace ProspectTogether.Client
 {
-    public class ModConfig : ModConfigBase
+
+
+    public enum MapMode
     {
-        public override string ModCode => "vsprospectorinfo";
+        Default,
+        Heatmap
+    }
+
+    public class ClientModConfig : CommonConfig
+    {
+        public override string ModCode => "ProspectTogetherClient";
 
         public bool RenderTexturesOnMap { get; set; } = false;
         public ColorWithAlpha TextureColor { get; set; } = new ColorWithAlpha(150, 125, 150, 128);
@@ -20,7 +25,10 @@ namespace ProspectorInfo
         public MapMode MapMode { get; set; } = MapMode.Default;
         public string HeatMapOre { get; set; } = null;
         public bool ShowGui { get; set; } = true;
-        public int SaveIntervalMinutes { get; set; } = 1;
-        
+        public bool AutoShare { get; set; } = true;
+
     }
+
+
+
 }

@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Vintagestory.API.MathTools;
 
-namespace ProspectorInfo.Models
+namespace ProspectTogether.Client
 {
     public class ColorWithAlpha
     {

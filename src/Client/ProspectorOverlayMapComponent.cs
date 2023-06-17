@@ -1,10 +1,10 @@
-﻿using ProspectorInfo.Models;
+﻿using ProspectTogether.Shared;
 using System.Text;
 using Vintagestory.API.Client;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
-namespace ProspectorInfo.Map
+namespace ProspectTogether.Client
 {
     public class ProspectorOverlayMapComponent : MapComponent
     {

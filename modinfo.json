@@ -1,12 +1,12 @@
 {
   "type": "code",
-  "modid": "prospectorinfo",
-  "name": "ProspectorInfo",
-  "author": "P3t3rix",
+  "modid": "prospecttogether",
+  "name": "ProspectTogether",
+  "author": "Wooza",
   "side" : "Universal",
-  "description": "Adds info to the tooltip for chunks that are already prospected",
-  "version": "4.3.0",
+  "description": "Stores and display prospecting data on the map and allows sharing data between players. Based ProspectoInfo by P3t3rix.",
+  "version": "1.0.0-rc.1",
   "dependencies": {
-    "game": "1.18.2"
+    "game": "1.18.5"
   }
 }

@@ -1,5 +1,5 @@
 ﻿using HarmonyLib;
-using ProspectorInfo.Models;
+using ProspectTogether.Shared;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -10,7 +10,7 @@ using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 using Vintagestory.ServerMods;
 
-namespace ProspectorInfo.Server
+namespace ProspectTogether.Server
 {
     [HarmonyPatch(typeof(ItemProspectingPick), "PrintProbeResults")]
     class PrintProbeResultsPatch
@@ -71,9 +71,9 @@ namespace ProspectorInfo.Server
                 }
             }
 
-            ProspectorInfoModSystem mod = world.Api.ModLoader.GetModSystem<ProspectorInfoModSystem>();
+            ProspectTogetherModSystem mod = world.Api.ModLoader.GetModSystem<ProspectTogetherModSystem>();
             ProspectInfo info = new ProspectInfo(new ChunkCoordinate(pos.X / chunksize, pos.Z / chunksize), occurences);
-            mod.Storage.DataProspected(info);
+            mod.ServerStorage.UserProspected(info, splr);
         }
     }
 }

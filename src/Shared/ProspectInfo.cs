@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Vintagestory.API.Config;
 
-namespace ProspectorInfo.Models
+namespace ProspectTogether.Shared
 {
     [ProtoBuf.ProtoContract(ImplicitFields = ProtoBuf.ImplicitFields.None)]
     public class ProspectInfo
@@ -129,7 +129,7 @@ namespace ProspectorInfo.Models
         [ProtoBuf.ProtoMember(4)]
         public readonly double AbsoluteDensity;
 
-        [Newtonsoft.Json.JsonConstructor]
+        [JsonConstructor]
         public OreOccurence(string name, string pageCode, RelativeDensity relativeDensity, double absoluteDensity)
         {
             Name = name;
@@ -175,10 +175,15 @@ namespace ProspectorInfo.Models
         public StoredData() { 
         }
 
-        [Newtonsoft.Json.JsonConstructor]
+        [JsonConstructor]
         public StoredData(int version, List<ProspectInfo> prospectInfos)
         {
             this.Version = version;
+            this.ProspectInfos = prospectInfos;
+        }
+
+        public StoredData(List<ProspectInfo> prospectInfos)
+        {
             this.ProspectInfos = prospectInfos;
         }
 

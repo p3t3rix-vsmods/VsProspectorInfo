@@ -1,8 +1,7 @@
-﻿using ProspectorInfo.Models;
-using System;
+﻿using System;
 using Vintagestory.API.Common;
 
-namespace ProspectorInfo.Utils
+namespace ProspectTogether.Client
 {
     public class ColorWithAlphaUpdate
     {

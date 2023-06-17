@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
-using ProspectorInfo.Models;
+using ProspectTogether.Shared;
 using System.Collections.Generic;
 using Vintagestory.API.Util;
 
-namespace ProspectorInfo.Utils
+namespace ProspectTogether.Client
 {
     internal class OreNames : Dictionary<string, string>
     {
@@ -16,12 +16,6 @@ namespace ProspectorInfo.Utils
                 if (!TryGetValue(elem.Value, out string _)) // Ores with the same translation will be saved under the same tag
                     Add(elem.Value, elem.Key);
         }
-    }
-
-    public enum MapMode
-    {
-        Default,
-        Heatmap
     }
 
 }
