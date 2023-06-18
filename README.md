@@ -1,5 +1,5 @@
 # VsProspectorInfo
-A clientside only mod to save trees by not having to write down the values of your prospecting.
+A clientside only mod to save trees by not having to write down the values of your prospecting. If you don't need it purely client-side there is also https://github.com/Wooza/ProspectTogether as an alternative with changes regarding sharing data.
 ## Installation
 Just drop the file into your mods folder. You just need this mod on the client, no serverside installation needed.
 
